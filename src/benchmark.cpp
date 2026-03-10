@@ -47,18 +47,31 @@ void runCase(int iters, size_t threads) {
     }
     auto parEnd = high_resolution_clock::now();
 
-    volatile double sink = seqOut(0, 0) + parOut(0, 0);
+    auto lockFreeStart = high_resolution_clock::now();
+    Matrix<double, N, N> lockFreeOut;
+    LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
+    for (int i = 0; i < iters; ++i) {
+        lockFreeOut = multiplyParallel(a, b, lockFreeExecutor);
+    }
+    auto lockFreeEnd = high_resolution_clock::now();
+
+    volatile double sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
     (void)sink;
 
     const auto seqUs = duration_cast<microseconds>(seqEnd - seqStart).count();
     const auto parUs = duration_cast<microseconds>(parEnd - parStart).count();
+    const auto lockFreeUs = duration_cast<microseconds>(lockFreeEnd - lockFreeStart).count();
 
     std::cout << "N=" << std::setw(4) << N
               << "  iters=" << std::setw(4) << iters
               << "  seq(μs)=" << std::setw(10) << seqUs
               << "  par(μs)=" << std::setw(10) << parUs
-              << "  speedup=" << std::fixed << std::setprecision(2)
+              << "  lf(μs)=" << std::setw(10) << lockFreeUs
+              << "  par_speedup=" << std::fixed << std::setprecision(2)
               << static_cast<double>(seqUs) / static_cast<double>(parUs)
+              << "x"
+              << "  lf_speedup="
+              << static_cast<double>(seqUs) / static_cast<double>(lockFreeUs)
               << "x\n";
 }
 
@@ -81,8 +94,8 @@ int main(int argc, char **argv) {
         threads = static_cast<size_t>(std::max(1, std::atoi(argv[2])));
     }
 
-    std::cout << "Benchmark multiplySequential vs multiplyParallel\n";
-    std::cout << "threads=" << threads << "\n";
+    std::cout << "Benchmark multiply: \tSequential \tvs\t Executor \tvs\t LockFreeExecutor\n";
+    std::cout << "threads = " << threads << "\n";
 
 
     matrix_engine::runAllCases<64, 128, 256, 512>(iters, threads);

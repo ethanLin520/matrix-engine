@@ -42,10 +42,18 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     const auto seq = matrix_engine::multiplySequential(a, b);
     matrix_engine::Executor executor(threads);
     const auto par = matrix_engine::multiplyParallel(a, b, executor);
+    matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
+    const auto lockFreePar = matrix_engine::multiplyParallel(a, b, lockFreeExecutor);
 
     if (!almostEqual(seq, par)) {
         std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
-                  << K << "x" << C << "\n";
+                  << K << "x" << C << " (Executor)\n";
+        std::exit(1);
+    }
+
+    if (!almostEqual(seq, lockFreePar)) {
+        std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
+                  << K << "x" << C << " (LockFreeExecutor)\n";
         std::exit(1);
     }
 }
