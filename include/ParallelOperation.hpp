@@ -51,35 +51,6 @@ Matrix<T, a, c> multiplyParallel(
     return result;
 }
 
-template<floating_point T, int a, int b, int c>
-Matrix<T, a, c> multiplyParallel(
-    const Matrix<T, a, b> &l,
-    const Matrix<T, b, c> &r,
-    LockFreeExecutor &executor
-) {
-    Matrix<T, a, c> result;
-    vector<future<void>> jobs;
-    jobs.reserve(a);
-
-    for (int i = 0; i < a; ++i) {
-        jobs.emplace_back(executor.submit([&l, &r, &result, i]() {
-            for (int j = 0; j < c; ++j) {
-                T total = 0;
-                for (int k = 0; k < b; ++k) {
-                    total += l(i, k) * r(k, j);
-                }
-                result(i, j) = total;
-            }
-        }));
-    }
-
-    for (auto &job : jobs) {
-        job.get();
-    }
-
-    return result;
-}
-
 } // namespace matrix_engine
 
 #endif // PARALLEL_OPERATION_HPP

@@ -33,11 +33,37 @@ namespace matrix_engine {
 
 class Executor {
 public:
-    Executor(
+    virtual ~Executor() = default;
+
+    template<typename Func, typename... Args>
+    auto submit(Func&& func, Args&&... args) {
+        using R = std::invoke_result_t<Func, Args...>;
+        auto task = make_shared<packaged_task<R()>>(
+            [func = std::forward<Func>(func), ... args = std::forward<Args>(args)]() mutable {
+                return func(args...);
+            }
+        );
+        future<R> res = task->get_future();
+
+        const bool success = enqueueTask([task]() { (*task)(); });
+        if (!success) {
+            throw std::runtime_error("Failed to submit task");
+        }
+
+        return res;
+    }
+
+protected:
+    virtual bool enqueueTask(function<void()> job) = 0;
+};
+
+class LockExecutor : public Executor {
+public:
+    LockExecutor(
         size_t num_threads = thread::hardware_concurrency()
     ) : num_threads(num_threads) { start(); };
 
-    ~Executor() noexcept{
+    ~LockExecutor() noexcept override {
         {
             unique_lock<mutex> lock(mtx);
             shutdown = true;
@@ -50,30 +76,9 @@ public:
         }
     }
 
-    template<typename Func, typename... Args>
-    auto submit(Func&& func, Args&&... args) {
-        using R = std::invoke_result_t<Func, Args...>;
-        auto task = make_shared<packaged_task<R()>>(
-            [func = std::forward<Func>(func), ... args = std::forward<Args>(args)]() mutable {
-                return func(args...);
-            }
-        );
-        future<R> res = task->get_future();
-
-        auto success = enqueueTask([task]() {
-            (*task)();
-        }); // lambda wrapper to execute the task
-
-        if (!success) {
-            throw std::runtime_error("Failed to submit task");
-        }
-
-        return res;
-    }
-
 private:
 
-    bool enqueueTask(std::function<void()> job) {
+    bool enqueueTask(std::function<void()> job) override {
         {
             std::lock_guard<std::mutex> lock(mtx);
             if (shutdown)
@@ -113,7 +118,7 @@ private:
         workers.reserve(num_threads);
         for (size_t i = 0; i < num_threads; ++i) {
             // constructs thread (this->worker_thread) inplace
-            workers.emplace_back(&Executor::worker_thread, this);
+            workers.emplace_back(&LockExecutor::worker_thread, this);
         }
     }
 
@@ -130,16 +135,16 @@ private:
 public:
     // Delete copy and move constructors and assignment operators
 
-    Executor(const Executor&) = delete;
-    Executor& operator=(const Executor&) = delete;
+    LockExecutor(const LockExecutor&) = delete;
+    LockExecutor& operator=(const LockExecutor&) = delete;
 
-    Executor(Executor&&) = delete;
-    Executor& operator=(Executor&&) = delete;
+    LockExecutor(LockExecutor&&) = delete;
+    LockExecutor& operator=(LockExecutor&&) = delete;
 
 };
 
 
-class LockFreeExecutor {
+class LockFreeExecutor : public Executor {
 public:
     LockFreeExecutor(
         size_t num_threads = thread::hardware_concurrency(),
@@ -149,40 +154,19 @@ public:
           queue_capacity(queue_capacity > 0 ? queue_capacity : 1),
           slots(std::make_unique<TaskSlot[]>(this->queue_capacity))
     {
-        work_signal.clear(std::memory_order_relaxed);
+        work_signal.store(false, std::memory_order_relaxed);
         start();
     }
 
-    ~LockFreeExecutor() noexcept {
+    ~LockFreeExecutor() noexcept override {
         shutdown.store(true, std::memory_order_release);
-        work_signal.test_and_set(std::memory_order_release);
+        work_signal.store(true, std::memory_order_release);
         work_signal.notify_all();
         for (auto &worker : workers) {
             if (worker.joinable()) {
                 worker.join();
             }
         }
-    }
-
-    template<typename Func, typename... Args>
-    auto submit(Func&& func, Args&&... args) {
-        using R = std::invoke_result_t<Func, Args...>;
-        auto task = make_shared<packaged_task<R()>>(
-            [func = std::forward<Func>(func), ... args = std::forward<Args>(args)]() mutable {
-                return func(args...);
-            }
-        );
-        future<R> res = task->get_future();
-
-        auto success = enqueueTask([task]() {
-            (*task)();
-        });
-
-        if (!success) {
-            throw std::runtime_error("Failed to submit task");
-        }
-
-        return res;
     }
 
 public:
@@ -193,15 +177,11 @@ public:
 
 private:
     struct TaskSlot {
-        std::atomic_flag ready = ATOMIC_FLAG_INIT;
+        std::atomic<bool> ready{false};
         function<void()> fn;
-
-        TaskSlot() {
-            ready.clear(std::memory_order_relaxed);
-        }
     };
 
-    bool enqueueTask(function<void()> job) {
+    bool enqueueTask(function<void()> job) override {
         while (true) {
             if (shutdown.load(std::memory_order_acquire)) {
                 return false;
@@ -210,6 +190,7 @@ private:
             size_t t = tail.load(std::memory_order_relaxed);
             const size_t h = head.load(std::memory_order_acquire);
             if (t - h >= queue_capacity) {
+                // Queue full
                 std::this_thread::yield();
                 continue;
             }
@@ -218,20 +199,23 @@ private:
                     t, t + 1,
                     std::memory_order_acq_rel,
                     std::memory_order_relaxed)) {
+                // Lost the race
                 continue;
             }
 
             TaskSlot &slot = slots[t % queue_capacity];
-            while (slot.ready.test(std::memory_order_acquire)) {
+            while (slot.ready.load(std::memory_order_acquire)) {
                 slot.ready.wait(true, std::memory_order_relaxed);
             }
 
+            // Count this job before publishing the slot so workers can never
+            // observe and complete a task before it is accounted for.
+            pending.fetch_add(1, std::memory_order_acq_rel);
             slot.fn = std::move(job);
-            slot.ready.test_and_set(std::memory_order_release);
+            slot.ready.store(true, std::memory_order_release);
             slot.ready.notify_one();
 
-            pending.fetch_add(1, std::memory_order_release);
-            work_signal.test_and_set(std::memory_order_release);
+            work_signal.store(true, std::memory_order_release);
             work_signal.notify_one();
             return true;
         }
@@ -253,13 +237,13 @@ private:
             }
 
             TaskSlot &slot = slots[h % queue_capacity];
-            while (!slot.ready.test(std::memory_order_acquire)) {
+            while (!slot.ready.load(std::memory_order_acquire)) {
                 slot.ready.wait(false, std::memory_order_relaxed);
             }
 
             out = std::move(slot.fn);
             slot.fn = {};
-            slot.ready.clear(std::memory_order_release);
+            slot.ready.store(false, std::memory_order_release);
             slot.ready.notify_one();
             return true;
         }
@@ -272,9 +256,9 @@ private:
                 job();
                 const size_t left = pending.fetch_sub(1, std::memory_order_acq_rel) - 1;
                 if (left == 0) {
-                    work_signal.clear(std::memory_order_release);
+                    work_signal.store(false, std::memory_order_release);
                     if (pending.load(std::memory_order_acquire) > 0) {
-                        work_signal.test_and_set(std::memory_order_release);
+                        work_signal.store(true, std::memory_order_release);
                         work_signal.notify_one();
                     }
                 }
@@ -287,7 +271,7 @@ private:
             }
 
             if (pending.load(std::memory_order_acquire) == 0) {
-                work_signal.clear(std::memory_order_release);
+                work_signal.store(false, std::memory_order_release);
             }
             work_signal.wait(false, std::memory_order_relaxed);
         }
@@ -311,7 +295,7 @@ private:
     std::atomic<size_t> pending{0};
 
     std::atomic<bool> shutdown{false};
-    std::atomic_flag work_signal = ATOMIC_FLAG_INIT;
+    std::atomic<bool> work_signal{false};
 };
 
 } // namespace matrix_engine

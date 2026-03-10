@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 
 namespace {
 
@@ -40,20 +41,74 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     }
 
     const auto seq = matrix_engine::multiplySequential(a, b);
-    matrix_engine::Executor executor(threads);
+    matrix_engine::LockExecutor executor(threads);
     const auto par = matrix_engine::multiplyParallel(a, b, executor);
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
     const auto lockFreePar = matrix_engine::multiplyParallel(a, b, lockFreeExecutor);
 
     if (!almostEqual(seq, par)) {
         std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
-                  << K << "x" << C << " (Executor)\n";
+                  << K << "x" << C << " (LockExecutor)\n";
         std::exit(1);
     }
 
     if (!almostEqual(seq, lockFreePar)) {
         std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
                   << K << "x" << C << " (LockFreeExecutor)\n";
+        std::exit(1);
+    }
+}
+
+void checkMatrixBoundsAndInitSafety() {
+    bool threw = false;
+    try {
+        matrix_engine::Matrix<double, 2, 2> badCols{{1.0, 2.0, 3.0}};
+        (void)badCols;
+    } catch (const std::invalid_argument &) {
+        threw = true;
+    }
+    if (!threw) {
+        std::cerr << "Expected invalid_argument for too many columns in initializer\n";
+        std::exit(1);
+    }
+
+    threw = false;
+    try {
+        matrix_engine::Matrix<double, 2, 2> badRows{
+            {1.0, 2.0},
+            {3.0, 4.0},
+            {5.0, 6.0}
+        };
+        (void)badRows;
+    } catch (const std::invalid_argument &) {
+        threw = true;
+    }
+    if (!threw) {
+        std::cerr << "Expected invalid_argument for too many rows in initializer\n";
+        std::exit(1);
+    }
+
+    matrix_engine::Matrix<double, 2, 2> m{{1.0, 2.0}, {3.0, 4.0}};
+    threw = false;
+    try {
+        (void)m(2, 0);
+    } catch (const std::out_of_range &) {
+        threw = true;
+    }
+    if (!threw) {
+        std::cerr << "Expected out_of_range for non-const index access\n";
+        std::exit(1);
+    }
+
+    const matrix_engine::Matrix<double, 2, 2> cm{{1.0, 2.0}, {3.0, 4.0}};
+    threw = false;
+    try {
+        (void)cm(0, 2);
+    } catch (const std::out_of_range &) {
+        threw = true;
+    }
+    if (!threw) {
+        std::cerr << "Expected out_of_range for const index access\n";
         std::exit(1);
     }
 }
@@ -69,6 +124,7 @@ int main() {
     checkRandomCase<8, 8, 8>(threads, rng);
     checkRandomCase<16, 12, 10>(threads, rng);
     checkRandomCase<32, 32, 32>(threads, rng);
+    checkMatrixBoundsAndInitSafety();
 
     std::cout << "All tests passed.\n";
     return 0;

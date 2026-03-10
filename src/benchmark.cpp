@@ -41,7 +41,7 @@ void runCase(int iters, size_t threads) {
 
     auto parStart = high_resolution_clock::now();
     Matrix<double, N, N> parOut;
-    Executor executor(threads);
+    LockExecutor executor(threads);
     for (int i = 0; i < iters; ++i) {
         parOut = multiplyParallel(a, b, executor);
     }
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
         threads = static_cast<size_t>(std::max(1, std::atoi(argv[2])));
     }
 
-    std::cout << "Benchmark multiply: \tSequential \tvs\t Executor \tvs\t LockFreeExecutor\n";
+    std::cout << "Benchmark multiply: \tSequential \tvs\t LockExecutor \tvs\t LockFreeExecutor\n";
     std::cout << "threads = " << threads << "\n";
 
 

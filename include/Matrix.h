@@ -12,6 +12,7 @@
 #include <sstream>
 #include <iomanip>
 #include <concepts>
+#include <stdexcept>
 
 #undef minor
 using std::initializer_list;
@@ -33,18 +34,31 @@ template<floating_point T, int rows, int cols = rows>
 class Matrix {
 public:
 	Matrix() : data{} {}
-	Matrix(initializer_list<initializer_list<T>> init) {
-		auto dp = data.begin();
-		for (auto row : init) {
-			std::copy(row.begin(), row.end(), dp->begin());
-			dp++;
+	Matrix(initializer_list<initializer_list<T>> init) : data{} {
+		if (init.size() > static_cast<size_t>(rows)) {
+			throw std::invalid_argument("Matrix initializer has too many rows");
+		}
+
+		size_t rowIndex = 0;
+		for (const auto &row : init) {
+			if (row.size() > static_cast<size_t>(cols)) {
+				throw std::invalid_argument("Matrix initializer has too many columns");
+			}
+			std::copy(row.begin(), row.end(), data[rowIndex].begin());
+			++rowIndex;
 		}
 	}
 	T &operator()(int x, int y) {
+		if (x < 0 || x >= rows || y < 0 || y >= cols) {
+			throw std::out_of_range("Matrix index out of range");
+		}
 		return data[x][y];
 	}
 
 	T operator()(int x, int y) const {
+		if (x < 0 || x >= rows || y < 0 || y >= cols) {
+			throw std::out_of_range("Matrix index out of range");
+		}
 		return data[x][y];
 	}
 
