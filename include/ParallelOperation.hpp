@@ -51,6 +51,42 @@ Matrix<T, a, c> multiplyParallel(
     return result;
 }
 
+template<floating_point T, int n>
+T determinantSequential(const Matrix<T, n, n> &m) {
+    return m.determinant();
+}
+
+template<floating_point T, int n>
+T determinantParallel(
+    const Matrix<T, n, n> &m,
+    Executor &executor
+) {
+    if constexpr (n <= 3) {
+        return m.determinant();
+    } else {
+        vector<future<T>> jobs;
+        jobs.reserve(n);
+
+        for (int i = 0; i < n; ++i) {
+            const T coefficient = (i % 2 ? -1 : 1) * m(i, 0);
+            if (coefficient == static_cast<T>(0)) {
+                continue;
+            }
+
+            const auto minorMatrix = m.minor(i, 0);
+            jobs.emplace_back(executor.submit([coefficient, minorMatrix]() {
+                return coefficient * minorMatrix.determinant();
+            }));
+        }
+
+        T value = 0;
+        for (auto &job : jobs) {
+            value += job.get();
+        }
+        return value;
+    }
+}
+
 } // namespace matrix_engine
 
 #endif // PARALLEL_OPERATION_HPP

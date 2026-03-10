@@ -120,7 +120,7 @@ determinantImpl(const Matrix<T, h, w> &m)
 {
 	T val = 0;
 	for (int i = 0; i < h; i++) {
-		val = (i % 2 ? -1 : 1) * m(i, 0) * m.minor(i, 0).determinant();
+		val += (i % 2 ? -1 : 1) * m(i, 0) * m.minor(i, 0).determinant();
 	}
 	return val;
 }

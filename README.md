@@ -17,6 +17,7 @@ cmake --build build -j
 
 ```bash
 ./build/matrix_benchmark [iters] [threads]
+./build/matrix_determinant_benchmark [iters] [threads]
 ```
 
 Examples:
@@ -24,6 +25,9 @@ Examples:
 ```bash
 ./build/matrix_benchmark 5
 ./build/matrix_benchmark 8 4
+./build/matrix_determinant_benchmark 50
+./build/matrix_determinant_benchmark 20 4
 ```
 
-`multiplySequential` and `multiplyParallel` are defined in `include/ParallelOperation.hpp`.
+`multiplySequential`, `multiplyParallel`, `determinantSequential`, and `determinantParallel`
+are defined in `include/ParallelOperation.hpp`.

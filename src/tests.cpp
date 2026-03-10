@@ -21,6 +21,10 @@ bool almostEqual(const matrix_engine::Matrix<double, R, C> &a,
     return true;
 }
 
+bool almostEqual(double a, double b, double eps = 1e-9) {
+    return std::abs(a - b) <= eps;
+}
+
 template<int R, int K, int C>
 void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     std::uniform_real_distribution<double> dist(-3.0, 3.0);
@@ -55,6 +59,66 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     if (!almostEqual(seq, lockFreePar)) {
         std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
                   << K << "x" << C << " (LockFreeExecutor)\n";
+        std::exit(1);
+    }
+}
+
+template<int N>
+void checkDeterminantKnownCase(
+    const matrix_engine::Matrix<double, N, N> &m,
+    double expected,
+    size_t threads
+) {
+    const auto seq = matrix_engine::determinantSequential(m);
+    if (!almostEqual(seq, expected)) {
+        std::cerr << "Sequential determinant mismatch for " << N << "x" << N
+                  << ": expected " << expected << ", got " << seq << "\n";
+        std::exit(1);
+    }
+
+    matrix_engine::LockExecutor executor(threads);
+    const auto par = matrix_engine::determinantParallel(m, executor);
+    if (!almostEqual(par, expected)) {
+        std::cerr << "LockExecutor determinant mismatch for " << N << "x" << N
+                  << ": expected " << expected << ", got " << par << "\n";
+        std::exit(1);
+    }
+
+    matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
+    const auto lockFreePar = matrix_engine::determinantParallel(m, lockFreeExecutor);
+    if (!almostEqual(lockFreePar, expected)) {
+        std::cerr << "LockFreeExecutor determinant mismatch for " << N << "x" << N
+                  << ": expected " << expected << ", got " << lockFreePar << "\n";
+        std::exit(1);
+    }
+}
+
+template<int N>
+void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
+    std::uniform_real_distribution<double> dist(-3.0, 3.0);
+
+    matrix_engine::Matrix<double, N, N> m;
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            m(i, j) = dist(rng);
+        }
+    }
+
+    const auto seq = matrix_engine::determinantSequential(m);
+
+    matrix_engine::LockExecutor executor(threads);
+    const auto par = matrix_engine::determinantParallel(m, executor);
+    if (!almostEqual(seq, par)) {
+        std::cerr << "Random determinant mismatch for " << N << "x" << N
+                  << " (LockExecutor)\n";
+        std::exit(1);
+    }
+
+    matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
+    const auto lockFreePar = matrix_engine::determinantParallel(m, lockFreeExecutor);
+    if (!almostEqual(seq, lockFreePar)) {
+        std::cerr << "Random determinant mismatch for " << N << "x" << N
+                  << " (LockFreeExecutor)\n";
         std::exit(1);
     }
 }
@@ -124,6 +188,15 @@ int main() {
     checkRandomCase<8, 8, 8>(threads, rng);
     checkRandomCase<16, 12, 10>(threads, rng);
     checkRandomCase<32, 32, 32>(threads, rng);
+    checkDeterminantKnownCase<1>({{5.5}}, 5.5, threads);
+    checkDeterminantKnownCase<2>({{1.0, 2.0}, {3.0, 4.0}}, -2.0, threads);
+    checkDeterminantKnownCase<3>(
+        {{6.0, 1.0, 1.0}, {4.0, -2.0, 5.0}, {2.0, 8.0, 7.0}},
+        -306.0,
+        threads
+    );
+    checkRandomDeterminantCase<4>(threads, rng);
+    checkRandomDeterminantCase<5>(threads, rng);
     checkMatrixBoundsAndInitSafety();
 
     std::cout << "All tests passed.\n";
