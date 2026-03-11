@@ -29,6 +29,7 @@ using std::make_shared;
 
 namespace matrix_engine {
 
+// Executor is an abstract base class that defines the interface for submitting tasks to a thread pool.
 class Executor {
 public:
     virtual ~Executor() = default;
@@ -55,10 +56,17 @@ public:
         return res;
     }
 
+    /*
+    cancel all pending tasks in the thread pool.
+    */
+    virtual void cancel() = 0;
+
 protected:
     virtual bool enqueueTask(function<void()> job) = 0;
 };
 
+
+// LockExecutor implements a thread pool using a mutex and condition variable to synchronize access to a task queue.
 class LockExecutor : public Executor {
 public:
     LockExecutor(
@@ -77,6 +85,15 @@ public:
             }
         }
     }
+
+    void cancel() override {
+        queue<function<void()>> empty;
+        {
+            unique_lock<mutex> lock(mtx);
+            std::swap(tasks, empty);
+        }
+    }
+
 
 private:
 
@@ -146,6 +163,7 @@ public:
 };
 
 
+// LockFreeExecutor implements a lock-free thread pool using a circular buffer and atomic operations.
 class LockFreeExecutor : public Executor {
 public:
     LockFreeExecutor(
@@ -167,6 +185,23 @@ public:
         for (auto &worker : workers) {
             if (worker.joinable()) {
                 worker.join();
+            }
+        }
+    }
+
+    void cancel() override {
+        auto cutoff = tail.load(std::memory_order_acquire);
+        while (true) {
+            // Drain tasks in queue until cutoff.
+
+            if (head.load(std::memory_order_relaxed) >= cutoff) {
+                break;
+            }
+
+            std::function<void()> dropped;
+            if (tryDequeueTask(dropped)) {
+                dropped = {}; // destroy canceled task payload now
+                pending.fetch_sub(1, std::memory_order_acq_rel);
             }
         }
     }
@@ -256,14 +291,7 @@ private:
             function<void()> job;
             if (tryDequeueTask(job)) {
                 job();
-                const size_t left = pending.fetch_sub(1, std::memory_order_acq_rel) - 1;
-                if (left == 0) {
-                    work_signal.store(false, std::memory_order_release);
-                    if (pending.load(std::memory_order_acquire) > 0) {
-                        work_signal.store(true, std::memory_order_release);
-                        work_signal.notify_one();
-                    }
-                }
+                pending.fetch_sub(1, std::memory_order_acq_rel);
                 continue;
             }
 

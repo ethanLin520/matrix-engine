@@ -69,7 +69,12 @@ private:
         }
 
         for (auto &job : jobs) {
-            job.get();
+            try {
+                job.get();
+            } catch (...) {
+                mode.executor.cancel(); // Cancel remaining tasks if any task throws
+                throw std::current_exception(); // Rethrow the exception to be handled by the caller
+            }
         }
 
         return result;
@@ -122,7 +127,12 @@ private:
 
             T value = 0;
             for (auto &job : jobs) {
-                value += job.get();
+                try {
+                    value += job.get();
+                } catch (...) {
+                    mode.executor.cancel(); // Cancel remaining tasks if any task throws
+                    throw std::current_exception(); // Rethrow the exception to be handled by the caller
+                }
             }
             return value;
         }
