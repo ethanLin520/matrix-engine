@@ -1,5 +1,8 @@
 # Matrix Engine
 
+Matrix Engine is a C++20 fixed-size matrix library with sequential and parallel execution modes.
+It includes matrix multiplication and determinant operations, with both lock-based and lock-free executors for benchmarking and experimentation.
+
 ## Requirements
 
 - C++20-compatible compiler
