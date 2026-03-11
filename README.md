@@ -68,3 +68,4 @@ Design notes:
 - `ParMode` stores `Executor&`; the executor must outlive each operation call.
 - `MultiplyOperation` and `DeterminantOperation` are stateless and can be reused across threads.
 - Determinant parallel execution only parallelizes top-level Laplace terms (not recursive parallelism).
+- `Executor` are designed to be reused.

@@ -58,6 +58,7 @@ public:
 
     /*
     cancel all pending tasks in the thread pool.
+    After cancel, the executor can still be reused.
     */
     virtual void cancel() = 0;
 
