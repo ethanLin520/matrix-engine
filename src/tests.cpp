@@ -28,6 +28,7 @@ bool almostEqual(double a, double b, double eps = 1e-9) {
 template<int R, int K, int C>
 void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     std::uniform_real_distribution<double> dist(-3.0, 3.0);
+    const matrix_engine::MultiplyOperation multiplyOperation{};
 
     matrix_engine::Matrix<double, R, K> a;
     matrix_engine::Matrix<double, K, C> b;
@@ -44,11 +45,11 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
         }
     }
 
-    const auto seq = matrix_engine::multiplySequential(a, b);
+    const auto seq = multiplyOperation(matrix_engine::SeqMode{}, a, b);
     matrix_engine::LockExecutor executor(threads);
-    const auto par = matrix_engine::multiplyParallel(a, b, executor);
+    const auto par = multiplyOperation(matrix_engine::ParMode{executor}, a, b);
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
-    const auto lockFreePar = matrix_engine::multiplyParallel(a, b, lockFreeExecutor);
+    const auto lockFreePar = multiplyOperation(matrix_engine::ParMode{lockFreeExecutor}, a, b);
 
     if (!almostEqual(seq, par)) {
         std::cerr << "Mismatch for dimensions " << R << "x" << K << " * "
@@ -69,7 +70,8 @@ void checkDeterminantKnownCase(
     double expected,
     size_t threads
 ) {
-    const auto seq = matrix_engine::determinantSequential(m);
+    const matrix_engine::DeterminantOperation determinantOperation{};
+    const auto seq = determinantOperation(matrix_engine::SeqMode{}, m);
     if (!almostEqual(seq, expected)) {
         std::cerr << "Sequential determinant mismatch for " << N << "x" << N
                   << ": expected " << expected << ", got " << seq << "\n";
@@ -77,7 +79,7 @@ void checkDeterminantKnownCase(
     }
 
     matrix_engine::LockExecutor executor(threads);
-    const auto par = matrix_engine::determinantParallel(m, executor);
+    const auto par = determinantOperation(matrix_engine::ParMode{executor}, m);
     if (!almostEqual(par, expected)) {
         std::cerr << "LockExecutor determinant mismatch for " << N << "x" << N
                   << ": expected " << expected << ", got " << par << "\n";
@@ -85,7 +87,7 @@ void checkDeterminantKnownCase(
     }
 
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
-    const auto lockFreePar = matrix_engine::determinantParallel(m, lockFreeExecutor);
+    const auto lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
     if (!almostEqual(lockFreePar, expected)) {
         std::cerr << "LockFreeExecutor determinant mismatch for " << N << "x" << N
                   << ": expected " << expected << ", got " << lockFreePar << "\n";
@@ -96,6 +98,7 @@ void checkDeterminantKnownCase(
 template<int N>
 void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
     std::uniform_real_distribution<double> dist(-3.0, 3.0);
+    const matrix_engine::DeterminantOperation determinantOperation{};
 
     matrix_engine::Matrix<double, N, N> m;
     for (int i = 0; i < N; ++i) {
@@ -104,10 +107,10 @@ void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
         }
     }
 
-    const auto seq = matrix_engine::determinantSequential(m);
+    const auto seq = determinantOperation(matrix_engine::SeqMode{}, m);
 
     matrix_engine::LockExecutor executor(threads);
-    const auto par = matrix_engine::determinantParallel(m, executor);
+    const auto par = determinantOperation(matrix_engine::ParMode{executor}, m);
     if (!almostEqual(seq, par)) {
         std::cerr << "Random determinant mismatch for " << N << "x" << N
                   << " (LockExecutor)\n";
@@ -115,7 +118,7 @@ void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
     }
 
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
-    const auto lockFreePar = matrix_engine::determinantParallel(m, lockFreeExecutor);
+    const auto lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
     if (!almostEqual(seq, lockFreePar)) {
         std::cerr << "Random determinant mismatch for " << N << "x" << N
                   << " (LockFreeExecutor)\n";

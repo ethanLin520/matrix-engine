@@ -27,15 +27,16 @@ void fillRandom(Matrix<double, R, C> &m, std::mt19937_64 &rng) {
 template<int N>
 void runCase(int iters, size_t threads) {
     std::mt19937_64 rng(12345);
-    Matrix<double, N, N> a;
-    Matrix<double, N, N> b;
+    Matrix<double, N> a;
+    Matrix<double, N> b;
+    const MultiplyOperation multiplyOperation{};
     fillRandom(a, rng);
     fillRandom(b, rng);
 
     auto seqStart = high_resolution_clock::now();
     Matrix<double, N, N> seqOut;
     for (int i = 0; i < iters; ++i) {
-        seqOut = multiplySequential(a, b);
+        seqOut = multiplyOperation(SeqMode{}, a, b);
     }
     auto seqEnd = high_resolution_clock::now();
 
@@ -43,7 +44,7 @@ void runCase(int iters, size_t threads) {
     Matrix<double, N, N> parOut;
     LockExecutor executor(threads);
     for (int i = 0; i < iters; ++i) {
-        parOut = multiplyParallel(a, b, executor);
+        parOut = multiplyOperation(ParMode{executor}, a, b);
     }
     auto parEnd = high_resolution_clock::now();
 
@@ -51,7 +52,7 @@ void runCase(int iters, size_t threads) {
     Matrix<double, N, N> lockFreeOut;
     LockFreeExecutor lockFreeExecutor(threads);
     for (int i = 0; i < iters; ++i) {
-        lockFreeOut = multiplyParallel(a, b, lockFreeExecutor);
+        lockFreeOut = multiplyOperation(ParMode{lockFreeExecutor}, a, b);
     }
     auto lockFreeEnd = high_resolution_clock::now();
 

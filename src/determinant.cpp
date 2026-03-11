@@ -27,13 +27,14 @@ void fillRandom(Matrix<double, R, C> &m, std::mt19937_64 &rng) {
 template<int N>
 void runDeterminantCase(int iters, size_t threads) {
     std::mt19937_64 rng(54321);
-    Matrix<double, N, N> m;
+    Matrix<double, N> m;
+    const DeterminantOperation determinantOp{};
     fillRandom(m, rng);
 
     auto seqStart = high_resolution_clock::now();
     double seqOut = 0;
     for (int i = 0; i < iters; ++i) {
-        seqOut = determinantSequential(m);
+        seqOut = determinantOp(SeqMode{}, m);
     }
     auto seqEnd = high_resolution_clock::now();
 
@@ -41,7 +42,7 @@ void runDeterminantCase(int iters, size_t threads) {
     double parOut = 0;
     LockExecutor executor(threads);
     for (int i = 0; i < iters; ++i) {
-        parOut = determinantParallel(m, executor);
+        parOut = determinantOp(ParMode{executor}, m);
     }
     auto parEnd = high_resolution_clock::now();
 
@@ -49,7 +50,7 @@ void runDeterminantCase(int iters, size_t threads) {
     double lockFreeOut = 0;
     LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
     for (int i = 0; i < iters; ++i) {
-        lockFreeOut = determinantParallel(m, lockFreeExecutor);
+        lockFreeOut = determinantOp(ParMode{lockFreeExecutor}, m);
     }
     auto lockFreeEnd = high_resolution_clock::now();
 
