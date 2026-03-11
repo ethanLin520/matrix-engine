@@ -12,7 +12,7 @@ It includes matrix multiplication and determinant operations, with both lock-bas
 
 ```bash
 cmake -S . -B build
-cmake --build build -j
+cmake --build build --config Release -j
 ```
 
 ## Run Tests
@@ -57,8 +57,8 @@ Example:
 
 ```cpp
 matrix_engine::MultiplyOperation multiplyOperation;
-const matrix_engine::ExecutionMode seqMode{matrix_engine::SeqMode{}};
-const matrix_engine::ExecutionMode parMode{matrix_engine::ParMode{executor}};
+matrix_engine::ExecutionMode const seqMode{matrix_engine::SeqMode{}};
+matrix_engine::ExecutionMode const parMode{matrix_engine::ParMode{executor}};
 
 auto seq = multiplyOperation(seqMode, a, b);
 auto par = multiplyOperation(parMode, a, b);
