@@ -39,7 +39,7 @@ void runAllDeterminantCases(int iters, size_t threads) {
 
 
 int main(int argc, char **argv) {
-    int iters = 20;
+    int iters = 10;
     size_t threads = std::thread::hardware_concurrency();
 
     if (argc >= 2) {

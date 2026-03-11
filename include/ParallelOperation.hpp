@@ -7,6 +7,7 @@
 #include <future>
 #include <variant>
 #include <vector>
+#include <cmath>
 
 using std::floating_point;
 using std::future;
@@ -155,7 +156,7 @@ private:
 
             for (int i = 0; i < n; ++i) {
                 T const coefficient = (i % 2 ? -1 : 1) * m(i, 0);
-                if (coefficient == static_cast<T>(0)) {
+                if (is_zero(coefficient)) {
                     continue;
                 }
 
@@ -164,13 +165,19 @@ private:
                 }));
             }
 
-            T value = 0;
+            T value{0.0};
             for (auto &job : jobs) {
                 value += job.get();
             }
             guard.dismiss();
             return value;
         }
+    }
+
+    template<floating_point T>
+    bool is_zero(T value) const {
+        // Never use == on floating point
+        return std::abs(value) < static_cast<T>(1e-9);
     }
 };
 
