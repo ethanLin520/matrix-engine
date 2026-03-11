@@ -6,7 +6,6 @@
 #include <initializer_list>
 #include <algorithm>
 #include <array>
-#include <memory>
 #include <numeric>
 #include <iostream>
 #include <sstream>
@@ -17,8 +16,6 @@
 #undef minor
 using std::initializer_list;
 using std::array;
-using std::unique_ptr;
-using std::max_element;
 using std::accumulate;
 using std::ostream;
 using std::endl;

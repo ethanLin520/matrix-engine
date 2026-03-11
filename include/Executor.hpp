@@ -1,8 +1,6 @@
 #ifndef EXECUTOR_H
 #define EXECUTOR_H
 
-#include "Matrix.h"
-
 #include <vector>
 #include <queue>
 #include <thread>
