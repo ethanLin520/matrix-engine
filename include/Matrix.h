@@ -42,7 +42,7 @@ public:
 			if (row.size() > static_cast<size_t>(cols)) {
 				throw std::invalid_argument("Matrix initializer has too many columns");
 			}
-			std::copy(row.begin(), row.end(), data->operator[](rowIndex).begin());
+			std::copy(row.begin(), row.end(), (*data)[rowIndex].begin());
 			++rowIndex;
 		}
 	}

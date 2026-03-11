@@ -70,9 +70,11 @@ protected:
 // LockExecutor implements a thread pool using a mutex and condition variable to synchronize access to a task queue.
 class LockExecutor : public Executor {
 public:
-    LockExecutor(
-        size_t num_threads = thread::hardware_concurrency()
-    ) : num_threads(num_threads) { start(); };
+    LockExecutor(size_t num_threads = thread::hardware_concurrency())
+        : num_threads(num_threads > 0 ? num_threads : size_t{1})
+    {
+        start();
+    }
 
     ~LockExecutor() noexcept override {
         try {
@@ -136,9 +138,6 @@ private:
     }
 
     void start() {
-        // Clamp num_threads to at least 1
-        num_threads = num_threads > 0 ? num_threads : 1;
-
         workers.reserve(num_threads);
         for (size_t i = 0; i < num_threads; ++i) {
             // constructs thread (this->worker_thread) inplace
@@ -173,10 +172,10 @@ class LockFreeExecutor : public Executor {
 public:
     LockFreeExecutor(
         size_t num_threads = thread::hardware_concurrency(),
-        size_t queue_capacity = 1024
+        size_t queue_capacity = size_t{1024}
     )
-        : num_threads(num_threads > 0 ? num_threads : 1),
-          queue_capacity(queue_capacity > 0 ? queue_capacity : 1),
+        : num_threads(num_threads > 0 ? num_threads : size_t{1}),
+          queue_capacity(queue_capacity > 0 ? queue_capacity : size_t{1024}),
           slots(std::make_unique<TaskSlot[]>(this->queue_capacity))
     {
         work_signal.store(false, std::memory_order_relaxed);
