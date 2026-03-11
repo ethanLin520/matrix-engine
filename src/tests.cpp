@@ -86,6 +86,37 @@ void checkRandomMultiplyCase(size_t threads, std::mt19937_64 &rng) {
     );
 }
 
+template<int R, int C>
+void checkRandomAddCase(size_t threads, std::mt19937_64 &rng) {
+    matrix_engine::AddOperation const addOperation{};
+
+    matrix_engine::Matrix<double, R, C> a;
+    matrix_engine::Matrix<double, R, C> b;
+
+    fillRandomMatrix(a, rng);
+    fillRandomMatrix(b, rng);
+
+    auto const seq = addOperation(matrix_engine::SeqMode{}, a, b);
+    matrix_engine::LockExecutor executor(threads);
+    auto const par = addOperation(matrix_engine::ParMode{executor}, a, b);
+    matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
+    auto const lockFreePar = addOperation(matrix_engine::ParMode{lockFreeExecutor}, a, b);
+
+    requireAlmostEqual(
+        seq,
+        par,
+        "Add mismatch for dimensions " + std::to_string(R) + "x" + std::to_string(C) +
+            " (LockExecutor)"
+    );
+
+    requireAlmostEqual(
+        seq,
+        lockFreePar,
+        "Add mismatch for dimensions " + std::to_string(R) + "x" + std::to_string(C) +
+            " (LockFreeExecutor)"
+    );
+}
+
 template<int N>
 void checkDeterminantKnownCase(
     matrix_engine::Matrix<double, N, N> const &m,
@@ -191,11 +222,19 @@ int main() {
     std::mt19937_64 rng(20260310);
     size_t const threads = 4;
 
+    checkRandomAddCase<1, 1>(threads, rng);
+    checkRandomAddCase<2, 3>(threads, rng);
+    checkRandomAddCase<16, 12>(threads, rng);
+    checkRandomAddCase<64, 64>(threads, rng);
+    std::cout << "Add tests passed.\n";
+
     checkRandomMultiplyCase<1, 1, 1>(threads, rng);
     checkRandomMultiplyCase<2, 3, 4>(threads, rng);
     checkRandomMultiplyCase<8, 8, 8>(threads, rng);
     checkRandomMultiplyCase<16, 12, 10>(threads, rng);
     checkRandomMultiplyCase<32, 32, 32>(threads, rng);
+    std::cout << "Multiply tests passed.\n";
+
     checkDeterminantKnownCase<1>({{5.5}}, 5.5, threads);
     checkDeterminantKnownCase<2>({{1.0, 2.0}, {3.0, 4.0}}, -2.0, threads);
     checkDeterminantKnownCase<3>(
@@ -205,6 +244,8 @@ int main() {
     );
     checkRandomDeterminantCase<4>(threads, rng);
     checkRandomDeterminantCase<5>(threads, rng);
+    std::cout << "Determinant tests passed.\n";
+
     checkMatrixBoundsAndInitSafety();
 
     std::cout << "All tests passed.\n";

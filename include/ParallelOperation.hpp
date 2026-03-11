@@ -178,11 +178,11 @@ private:
 
 class AddOperation {
 public:
-    template<floating_point T, int a, int b, int c>
-    Matrix<T, a, c> operator()(
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> operator()(
         ExecutionMode const &mode,
         Matrix<T, a, b> const &l,
-        Matrix<T, b, c> const &r
+        Matrix<T, a, b> const &r
     ) const {
         return std::visit([&](auto const &executionMode) {
             return run(executionMode, l, r);
