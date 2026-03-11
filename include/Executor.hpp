@@ -35,6 +35,10 @@ class Executor {
 public:
     virtual ~Executor() = default;
 
+    /*
+    submit takes a callable and its arguments and enqueues it for execution by the thread pool.
+    It returns a future that will hold the result of the task once it is executed.
+    */
     template<typename Func, typename... Args>
     auto submit(Func&& func, Args&&... args) {
         using R = std::invoke_result_t<Func, Args...>;

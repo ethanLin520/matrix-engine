@@ -1,0 +1,30 @@
+Multiply Benchmark Results
+
+
+Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 1
+N=  64  iters=   5  seq(μs)=      1377  par(μs)=      1893  lf(μs)=      1882  par_speedup=0.73x  lf_speedup=0.73x
+N= 128  iters=   5  seq(μs)=     12988  par(μs)=     12093  lf(μs)=     11061  par_speedup=1.07x  lf_speedup=1.17x
+N= 256  iters=   5  seq(μs)=     80927  par(μs)=     89011  lf(μs)=     89226  par_speedup=0.91x  lf_speedup=0.91x
+N= 512  iters=   5  seq(μs)=    675805  par(μs)=    714661  lf(μs)=    721442  par_speedup=0.95x  lf_speedup=0.94x
+
+Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 2
+N=  64  iters=   5  seq(μs)=       905  par(μs)=       628  lf(μs)=       616  par_speedup=1.44x  lf_speedup=1.47x
+N= 128  iters=   5  seq(μs)=      9523  par(μs)=      5739  lf(μs)=      5528  par_speedup=1.66x  lf_speedup=1.72x
+N= 256  iters=   5  seq(μs)=     84408  par(μs)=     47279  lf(μs)=     46347  par_speedup=1.79x  lf_speedup=1.82x
+N= 512  iters=   5  seq(μs)=    706645  par(μs)=    389598  lf(μs)=    391066  par_speedup=1.81x  lf_speedup=1.81x
+
+Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 4
+N=  64  iters=   5  seq(μs)=       904  par(μs)=       491  lf(μs)=       838  par_speedup=1.84x  lf_speedup=1.08x
+N= 128  iters=   5  seq(μs)=      9536  par(μs)=      2704  lf(μs)=      2842  par_speedup=3.53x  lf_speedup=3.36x
+N= 256  iters=   5  seq(μs)=     82480  par(μs)=     24616  lf(μs)=     26443  par_speedup=3.35x  lf_speedup=3.12x
+N= 512  iters=   5  seq(μs)=    713045  par(μs)=    214541  lf(μs)=    264989  par_speedup=3.32x  lf_speedup=2.69x
+
+Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 8
+N=  64  iters=   5  seq(μs)=       976  par(μs)=       471  lf(μs)=       412  par_speedup=2.07x  lf_speedup=2.37x
+N= 128  iters=   5  seq(μs)=      9481  par(μs)=      1926  lf(μs)=      1944  par_speedup=4.92x  lf_speedup=4.88x
+N= 256  iters=   5  seq(μs)=     82831  par(μs)=     15866  lf(μs)=     14505  par_speedup=5.22x  lf_speedup=5.71x
+N= 512  iters=   5  seq(μs)=    709502  par(μs)=    129913  lf(μs)=    135670  par_speedup=5.46x  lf_speedup=5.23x

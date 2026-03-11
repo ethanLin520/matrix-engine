@@ -81,7 +81,7 @@ void runAllDeterminantCases(int iters, size_t threads) {
 } // namespace matrix_engine
 
 int main(int argc, char **argv) {
-    int iters = 50;
+    int iters = 20;
     size_t threads = std::thread::hardware_concurrency();
 
     if (argc >= 2) {
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
     std::cout << "threads = " << threads << "\n";
 
     // Laplace expansion grows factorially, so benchmark only small square matrices.
-    matrix_engine::runAllDeterminantCases<4, 8, 16>(iters, threads);
+    matrix_engine::runAllDeterminantCases<4, 6, 8, 10, 12>(iters, threads);
 
     return 0;
 }

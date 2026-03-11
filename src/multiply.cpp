@@ -49,7 +49,7 @@ void runCase(int iters, size_t threads) {
 
     auto lockFreeStart = high_resolution_clock::now();
     Matrix<double, N, N> lockFreeOut;
-    LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
+    LockFreeExecutor lockFreeExecutor(threads);
     for (int i = 0; i < iters; ++i) {
         lockFreeOut = multiplyParallel(a, b, lockFreeExecutor);
     }
