@@ -21,7 +21,7 @@ struct ParMode {
     Executor &executor;
 };
 
-using ExecutionMode = std::variant<SeqMode, ParMode>;   // Open for extension
+using ExecutionMode = std::variant<SeqMode, ParMode>;
 
 /*
 RAII guard to ensure that all pending tasks are
@@ -64,6 +64,7 @@ public:
     PendingTasksGuard(PendingTasksGuard&&) = delete;
     PendingTasksGuard& operator=(PendingTasksGuard&&) = delete;
 };
+
 
 class MultiplyOperation {
 public:
@@ -120,6 +121,7 @@ private:
         return result;
     }
 };
+
 
 class DeterminantOperation {
 public:
@@ -180,7 +182,6 @@ private:
         return std::abs(value) < static_cast<T>(1e-9);
     }
 };
-
 
 
 class AddOperation {
