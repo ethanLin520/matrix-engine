@@ -13,9 +13,11 @@
 namespace matrix_engine {
 namespace benchmark {
 
-template<int R, int C>
-void fillRandom(Matrix<double, R, C> &m, std::mt19937_64 &rng) {
-    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+using std::floating_point;
+
+template<floating_point F, int R, int C>
+void fillRandom(Matrix<F, R, C> &m, std::mt19937_64 &rng) {
+    std::uniform_real_distribution<F> dist(-1.0, 1.0);
     for (int i = 0; i < R; ++i) {
         for (int j = 0; j < C; ++j) {
             m(i, j) = dist(rng);
@@ -51,19 +53,19 @@ inline void printResultRow(
               << "x\n";
 }
 
-template<std::floating_point T>
-inline void consumeResult(T seqOut, T parOut, T lockFreeOut) {
-    volatile T sink = seqOut + parOut + lockFreeOut;
+template<std::floating_point F>
+inline void consumeResult(F seqOut, F parOut, F lockFreeOut) {
+    F volatile sink = seqOut + parOut + lockFreeOut;
     (void)sink;
 }
 
-template<std::floating_point T, int R, int C>
+template<std::floating_point F, int R, int C>
 inline void consumeResult(
-    const Matrix<T, R, C> &seqOut,
-    const Matrix<T, R, C> &parOut,
-    const Matrix<T, R, C> &lockFreeOut
+    Matrix<F, R, C> const &seqOut,
+    Matrix<F, R, C> const &parOut,
+    Matrix<F, R, C> const &lockFreeOut
 ) {
-    volatile T sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
+    volatile F sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
     (void)sink;
 }
 
@@ -118,9 +120,9 @@ public:
 
         consumeResult(seqOut, parOut, lockFreeOut);
 
-        const auto seqUs = duration_cast<microseconds>(seqEnd - seqStart).count();
-        const auto parUs = duration_cast<microseconds>(parEnd - parStart).count();
-        const auto lockFreeUs = duration_cast<microseconds>(lockFreeEnd - lockFreeStart).count();
+        auto const seqUs = duration_cast<microseconds>(seqEnd - seqStart).count();
+        auto const parUs = duration_cast<microseconds>(parEnd - parStart).count();
+        auto const lockFreeUs = duration_cast<microseconds>(lockFreeEnd - lockFreeStart).count();
 
         printResultRow(n, nWidth, iters, seqUs, parUs, lockFreeUs);
     }

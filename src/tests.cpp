@@ -9,8 +9,8 @@
 namespace {
 
 template<int R, int C>
-bool almostEqual(const matrix_engine::Matrix<double, R, C> &a,
-                 const matrix_engine::Matrix<double, R, C> &b,
+bool almostEqual(matrix_engine::Matrix<double, R, C> const &a,
+                 matrix_engine::Matrix<double, R, C> const &b,
                  double eps = 1e-9) {
     for (int i = 0; i < R; ++i) {
         for (int j = 0; j < C; ++j) {
@@ -26,8 +26,8 @@ bool almostEqual(double a, double b, double eps = 1e-9) {
     return std::abs(a - b) <= eps;
 }
 
-template<typename T, typename U>
-void requireAlmostEqual(const T &actual, const U &expected, const std::string &message) {
+template<typename F, typename U>
+void requireAlmostEqual(F const &actual, U const &expected, std::string const &message) {
     if (!almostEqual(actual, expected)) {
         std::cerr << message << "\n";
         std::exit(1);
@@ -35,10 +35,10 @@ void requireAlmostEqual(const T &actual, const U &expected, const std::string &m
 }
 
 template<typename Exception, typename Fn>
-void requireThrows(Fn &&fn, const std::string &message) {
+void requireThrows(Fn &&fn, std::string const &message) {
     try {
         fn();
-    } catch (const Exception &) {
+    } catch (Exception const &) {
         return;
     }
     std::cerr << message << "\n";
@@ -56,8 +56,8 @@ void fillRandomMatrix(matrix_engine::Matrix<double, R, C> &m, std::mt19937_64 &r
 }
 
 template<int R, int K, int C>
-void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
-    const matrix_engine::MultiplyOperation multiplyOperation{};
+void checkRandomMultiplyCase(size_t threads, std::mt19937_64 &rng) {
+    matrix_engine::MultiplyOperation const multiplyOperation{};
 
     matrix_engine::Matrix<double, R, K> a;
     matrix_engine::Matrix<double, K, C> b;
@@ -65,11 +65,11 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     fillRandomMatrix(a, rng);
     fillRandomMatrix(b, rng);
 
-    const auto seq = multiplyOperation(matrix_engine::SeqMode{}, a, b);
+    auto const seq = multiplyOperation(matrix_engine::SeqMode{}, a, b);
     matrix_engine::LockExecutor executor(threads);
-    const auto par = multiplyOperation(matrix_engine::ParMode{executor}, a, b);
+    auto const par = multiplyOperation(matrix_engine::ParMode{executor}, a, b);
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
-    const auto lockFreePar = multiplyOperation(matrix_engine::ParMode{lockFreeExecutor}, a, b);
+    auto const lockFreePar = multiplyOperation(matrix_engine::ParMode{lockFreeExecutor}, a, b);
 
     requireAlmostEqual(
         seq,
@@ -86,14 +86,45 @@ void checkRandomCase(size_t threads, std::mt19937_64 &rng) {
     );
 }
 
+template<int R, int C>
+void checkRandomAddCase(size_t threads, std::mt19937_64 &rng) {
+    matrix_engine::AddOperation const addOperation{};
+
+    matrix_engine::Matrix<double, R, C> a;
+    matrix_engine::Matrix<double, R, C> b;
+
+    fillRandomMatrix(a, rng);
+    fillRandomMatrix(b, rng);
+
+    auto const seq = addOperation(matrix_engine::SeqMode{}, a, b);
+    matrix_engine::LockExecutor executor(threads);
+    auto const par = addOperation(matrix_engine::ParMode{executor}, a, b);
+    matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(R));
+    auto const lockFreePar = addOperation(matrix_engine::ParMode{lockFreeExecutor}, a, b);
+
+    requireAlmostEqual(
+        seq,
+        par,
+        "Add mismatch for dimensions " + std::to_string(R) + "x" + std::to_string(C) +
+            " (LockExecutor)"
+    );
+
+    requireAlmostEqual(
+        seq,
+        lockFreePar,
+        "Add mismatch for dimensions " + std::to_string(R) + "x" + std::to_string(C) +
+            " (LockFreeExecutor)"
+    );
+}
+
 template<int N>
 void checkDeterminantKnownCase(
-    const matrix_engine::Matrix<double, N, N> &m,
+    matrix_engine::Matrix<double, N, N> const &m,
     double expected,
     size_t threads
 ) {
-    const matrix_engine::DeterminantOperation determinantOperation{};
-    const auto seq = determinantOperation(matrix_engine::SeqMode{}, m);
+    matrix_engine::DeterminantOperation const determinantOperation{};
+    auto const seq = determinantOperation(matrix_engine::SeqMode{}, m);
     requireAlmostEqual(
         seq,
         expected,
@@ -103,7 +134,7 @@ void checkDeterminantKnownCase(
     );
 
     matrix_engine::LockExecutor executor(threads);
-    const auto par = determinantOperation(matrix_engine::ParMode{executor}, m);
+    auto const par = determinantOperation(matrix_engine::ParMode{executor}, m);
     requireAlmostEqual(
         par,
         expected,
@@ -113,7 +144,7 @@ void checkDeterminantKnownCase(
     );
 
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
-    const auto lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
+    auto const lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
     requireAlmostEqual(
         lockFreePar,
         expected,
@@ -125,15 +156,15 @@ void checkDeterminantKnownCase(
 
 template<int N>
 void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
-    const matrix_engine::DeterminantOperation determinantOperation{};
+    matrix_engine::DeterminantOperation const determinantOperation{};
 
     matrix_engine::Matrix<double, N, N> m;
     fillRandomMatrix(m, rng);
 
-    const auto seq = determinantOperation(matrix_engine::SeqMode{}, m);
+    auto const seq = determinantOperation(matrix_engine::SeqMode{}, m);
 
     matrix_engine::LockExecutor executor(threads);
-    const auto par = determinantOperation(matrix_engine::ParMode{executor}, m);
+    auto const par = determinantOperation(matrix_engine::ParMode{executor}, m);
     requireAlmostEqual(
         seq,
         par,
@@ -142,7 +173,7 @@ void checkRandomDeterminantCase(size_t threads, std::mt19937_64 &rng) {
     );
 
     matrix_engine::LockFreeExecutor lockFreeExecutor(threads, 4 * static_cast<size_t>(N));
-    const auto lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
+    auto const lockFreePar = determinantOperation(matrix_engine::ParMode{lockFreeExecutor}, m);
     requireAlmostEqual(
         seq,
         lockFreePar,
@@ -178,7 +209,7 @@ void checkMatrixBoundsAndInitSafety() {
         "Expected out_of_range for non-const index access"
     );
 
-    const matrix_engine::Matrix<double, 2, 2> cm{{1.0, 2.0}, {3.0, 4.0}};
+    matrix_engine::Matrix<double, 2, 2> const cm{{1.0, 2.0}, {3.0, 4.0}};
     requireThrows<std::out_of_range>(
         [&cm] { (void)cm(0, 2); },
         "Expected out_of_range for const index access"
@@ -189,13 +220,21 @@ void checkMatrixBoundsAndInitSafety() {
 
 int main() {
     std::mt19937_64 rng(20260310);
-    const size_t threads = 4;
+    size_t const threads = 4;
 
-    checkRandomCase<1, 1, 1>(threads, rng);
-    checkRandomCase<2, 3, 4>(threads, rng);
-    checkRandomCase<8, 8, 8>(threads, rng);
-    checkRandomCase<16, 12, 10>(threads, rng);
-    checkRandomCase<32, 32, 32>(threads, rng);
+    checkRandomAddCase<1, 1>(threads, rng);
+    checkRandomAddCase<2, 3>(threads, rng);
+    checkRandomAddCase<16, 12>(threads, rng);
+    checkRandomAddCase<64, 64>(threads, rng);
+    std::cout << "Add tests passed.\n";
+
+    checkRandomMultiplyCase<1, 1, 1>(threads, rng);
+    checkRandomMultiplyCase<2, 3, 4>(threads, rng);
+    checkRandomMultiplyCase<8, 8, 8>(threads, rng);
+    checkRandomMultiplyCase<16, 12, 10>(threads, rng);
+    checkRandomMultiplyCase<32, 32, 32>(threads, rng);
+    std::cout << "Multiply tests passed.\n";
+
     checkDeterminantKnownCase<1>({{5.5}}, 5.5, threads);
     checkDeterminantKnownCase<2>({{1.0, 2.0}, {3.0, 4.0}}, -2.0, threads);
     checkDeterminantKnownCase<3>(
@@ -205,6 +244,8 @@ int main() {
     );
     checkRandomDeterminantCase<4>(threads, rng);
     checkRandomDeterminantCase<5>(threads, rng);
+    std::cout << "Determinant tests passed.\n";
+
     checkMatrixBoundsAndInitSafety();
 
     std::cout << "All tests passed.\n";

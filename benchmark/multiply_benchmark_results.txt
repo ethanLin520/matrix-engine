@@ -1,30 +1,34 @@
 Multiply Benchmark Results
 
 
+
 Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
 threads = 1
-N=  64  iters=   5  seq(μs)=      1377  par(μs)=      1893  lf(μs)=      1882  par_speedup=0.73x  lf_speedup=0.73x
-N= 128  iters=   5  seq(μs)=     12988  par(μs)=     12093  lf(μs)=     11061  par_speedup=1.07x  lf_speedup=1.17x
-N= 256  iters=   5  seq(μs)=     80927  par(μs)=     89011  lf(μs)=     89226  par_speedup=0.91x  lf_speedup=0.91x
-N= 512  iters=   5  seq(μs)=    675805  par(μs)=    714661  lf(μs)=    721442  par_speedup=0.95x  lf_speedup=0.94x
+N=  64  iters=   5  seq(μs)=      1914  par(μs)=      2244  lf(μs)=      2141  par_speedup = 0.85x  lf_speedup = 0.89x
+N= 128  iters=   5  seq(μs)=     15120  par(μs)=     13213  lf(μs)=     11752  par_speedup = 1.14x  lf_speedup = 1.29x
+N= 256  iters=   5  seq(μs)=     80639  par(μs)=     79925  lf(μs)=     84461  par_speedup = 1.01x  lf_speedup = 0.95x
+N= 512  iters=   5  seq(μs)=    661238  par(μs)=    711583  lf(μs)=    714764  par_speedup = 0.93x  lf_speedup = 0.93x
+
 
 Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
 threads = 2
-N=  64  iters=   5  seq(μs)=       905  par(μs)=       628  lf(μs)=       616  par_speedup=1.44x  lf_speedup=1.47x
-N= 128  iters=   5  seq(μs)=      9523  par(μs)=      5739  lf(μs)=      5528  par_speedup=1.66x  lf_speedup=1.72x
-N= 256  iters=   5  seq(μs)=     84408  par(μs)=     47279  lf(μs)=     46347  par_speedup=1.79x  lf_speedup=1.82x
-N= 512  iters=   5  seq(μs)=    706645  par(μs)=    389598  lf(μs)=    391066  par_speedup=1.81x  lf_speedup=1.81x
+N=  64  iters=   5  seq(μs)=      1535  par(μs)=       992  lf(μs)=      1010  par_speedup = 1.55x  lf_speedup = 1.52x
+N= 128  iters=   5  seq(μs)=     16316  par(μs)=      8733  lf(μs)=      9115  par_speedup = 1.87x  lf_speedup = 1.79x
+N= 256  iters=   5  seq(μs)=    147742  par(μs)=     84789  lf(μs)=    100106  par_speedup = 1.74x  lf_speedup = 1.48x
+N= 512  iters=   5  seq(μs)=   1213061  par(μs)=    772321  lf(μs)=    905134  par_speedup = 1.57x  lf_speedup = 1.34x
+
 
 Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
 threads = 4
-N=  64  iters=   5  seq(μs)=       904  par(μs)=       491  lf(μs)=       838  par_speedup=1.84x  lf_speedup=1.08x
-N= 128  iters=   5  seq(μs)=      9536  par(μs)=      2704  lf(μs)=      2842  par_speedup=3.53x  lf_speedup=3.36x
-N= 256  iters=   5  seq(μs)=     82480  par(μs)=     24616  lf(μs)=     26443  par_speedup=3.35x  lf_speedup=3.12x
-N= 512  iters=   5  seq(μs)=    713045  par(μs)=    214541  lf(μs)=    264989  par_speedup=3.32x  lf_speedup=2.69x
+N=  64  iters=   5  seq(μs)=      2481  par(μs)=      1371  lf(μs)=       951  par_speedup = 1.81x  lf_speedup = 2.61x
+N= 128  iters=   5  seq(μs)=     26268  par(μs)=      7138  lf(μs)=      6924  par_speedup = 3.68x  lf_speedup = 3.79x
+N= 256  iters=   5  seq(μs)=    211711  par(μs)=     65991  lf(μs)=     54542  par_speedup = 3.21x  lf_speedup = 3.88x
+N= 512  iters=   5  seq(μs)=   1244071  par(μs)=    484920  lf(μs)=    411716  par_speedup = 2.57x  lf_speedup = 3.02x
+
 
 Benchmark multiply: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
 threads = 8
-N=  64  iters=   5  seq(μs)=       976  par(μs)=       471  lf(μs)=       412  par_speedup=2.07x  lf_speedup=2.37x
-N= 128  iters=   5  seq(μs)=      9481  par(μs)=      1926  lf(μs)=      1944  par_speedup=4.92x  lf_speedup=4.88x
-N= 256  iters=   5  seq(μs)=     82831  par(μs)=     15866  lf(μs)=     14505  par_speedup=5.22x  lf_speedup=5.71x
-N= 512  iters=   5  seq(μs)=    709502  par(μs)=    129913  lf(μs)=    135670  par_speedup=5.46x  lf_speedup=5.23x
+N=  64  iters=   5  seq(μs)=      2392  par(μs)=      1599  lf(μs)=      1380  par_speedup = 1.50x  lf_speedup = 1.73x
+N= 128  iters=   5  seq(μs)=     22496  par(μs)=     14471  lf(μs)=     15930  par_speedup = 1.55x  lf_speedup = 1.41x
+N= 256  iters=   5  seq(μs)=    174839  par(μs)=     49437  lf(μs)=    143804  par_speedup = 3.54x  lf_speedup = 1.22x
+N= 512  iters=   5  seq(μs)=   1873531  par(μs)=    385967  lf(μs)=    536316  par_speedup = 4.85x  lf_speedup = 3.49x

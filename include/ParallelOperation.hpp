@@ -7,6 +7,7 @@
 #include <future>
 #include <variant>
 #include <vector>
+#include <cmath>
 
 using std::floating_point;
 using std::future;
@@ -20,17 +21,60 @@ struct ParMode {
     Executor &executor;
 };
 
-using ExecutionMode = std::variant<SeqMode, ParMode>;   // Open for extension
+using ExecutionMode = std::variant<SeqMode, ParMode>;
+
+/*
+RAII guard to ensure that all pending tasks are
+either completed or cancelled when the guard goes out of scope.
+*/
+template<typename FutureT>
+class PendingTasksGuard {
+public:
+    PendingTasksGuard(Executor &executor, vector<FutureT> &taskQueue) noexcept
+        : executor(executor), q(taskQueue) {}
+
+    ~PendingTasksGuard() noexcept {
+        if (!active) {
+            return;
+        }
+        try {
+            executor.cancel();
+            for (auto &job : q) {
+                if (job.valid()) {
+                    job.wait();
+                }
+            }
+        } catch (...) {
+            // Never throw from cleanup in destructor.
+        }
+    }
+
+    void dismiss() noexcept {
+        active = false;
+    }
+
+private:
+    Executor &executor;
+    vector<FutureT> &q;
+    bool active = true;
+
+public:
+    PendingTasksGuard(PendingTasksGuard const&) = delete;
+    PendingTasksGuard& operator=(PendingTasksGuard const&) = delete;
+    PendingTasksGuard(PendingTasksGuard&&) = delete;
+    PendingTasksGuard& operator=(PendingTasksGuard&&) = delete;
+};
+
 
 class MultiplyOperation {
 public:
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> operator()(
-        const ExecutionMode &mode,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        ExecutionMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
-        return std::visit([&](const auto &executionMode) {
+        return std::visit([&](auto const &executionMode) {
             return run(executionMode, l, r);
         }, mode);
     }
@@ -38,22 +82,23 @@ public:
 private:
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> run(
-        const SeqMode &,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        SeqMode const &,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
         return l * r;
     }
 
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> run(
-        const ParMode &mode,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        ParMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
         Matrix<T, a, c> result;
         vector<future<void>> jobs;
         jobs.reserve(a);
+        PendingTasksGuard<future<void>> guard(mode.executor, jobs);
 
         // Parallelize over rows to keep each task writing to disjoint output data.
         for (int i = 0; i < a; ++i) {
@@ -69,26 +114,23 @@ private:
         }
 
         for (auto &job : jobs) {
-            try {
-                job.get();
-            } catch (...) {
-                mode.executor.cancel(); // Cancel remaining tasks if any task throws
-                throw std::current_exception(); // Rethrow the exception to be handled by the caller
-            }
+            job.get();
         }
+        guard.dismiss();
 
         return result;
     }
 };
 
+
 class DeterminantOperation {
 public:
     template<floating_point T, int n>
     T operator()(
-        const ExecutionMode &mode,
-        const Matrix<T, n, n> &m
+        ExecutionMode const &mode,
+        Matrix<T, n, n> const &m
     ) const {
-        return std::visit([&](const auto &executionMode) {
+        return std::visit([&](auto const &executionMode) {
             return run(executionMode, m);
         }, mode);
     }
@@ -96,46 +138,101 @@ public:
 private:
     template<floating_point T, int n>
     T run(
-        const SeqMode &,
-        const Matrix<T, n, n> &m
+        SeqMode const &,
+        Matrix<T, n, n> const &m
     ) const {
         return m.determinant();
     }
 
     template<floating_point T, int n>
     T run(
-        const ParMode &mode,
-        const Matrix<T, n, n> &m
+        ParMode const &mode,
+        Matrix<T, n, n> const &m
     ) const {
         if constexpr (n <= 3) {
             return m.determinant();
         } else {
             vector<future<T>> jobs;
             jobs.reserve(n);
+            PendingTasksGuard<future<T>> guard(mode.executor, jobs);
 
             for (int i = 0; i < n; ++i) {
-                const T coefficient = (i % 2 ? -1 : 1) * m(i, 0);
-                if (coefficient == static_cast<T>(0)) {
+                T const coefficient = (i % 2 ? -1 : 1) * m(i, 0);
+                if (is_zero(coefficient)) {
                     continue;
                 }
 
-                const auto minorMatrix = m.minor(i, 0);
-                jobs.emplace_back(mode.executor.submit([coefficient, minorMatrix]() {
-                    return coefficient * minorMatrix.determinant();
+                jobs.emplace_back(mode.executor.submit([coefficient, &m, i]() {
+                    return coefficient * m.minor(i, 0).determinant();
                 }));
             }
 
-            T value = 0;
+            T value{0.0};
             for (auto &job : jobs) {
-                try {
-                    value += job.get();
-                } catch (...) {
-                    mode.executor.cancel(); // Cancel remaining tasks if any task throws
-                    throw std::current_exception(); // Rethrow the exception to be handled by the caller
-                }
+                value += job.get();
             }
+            guard.dismiss();
             return value;
         }
+    }
+
+    template<floating_point T>
+    bool is_zero(T value) const {
+        // Never use == on floating point
+        return std::abs(value) < static_cast<T>(1e-9);
+    }
+};
+
+
+class AddOperation {
+public:
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> operator()(
+        ExecutionMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, a, b> const &r
+    ) const {
+        return std::visit([&](auto const &executionMode) {
+            return run(executionMode, l, r);
+        }, mode);
+    }
+
+private:
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> run(
+        SeqMode const &,
+        Matrix<T, a, b> const &l,
+        Matrix<T, a, b> const &r
+    ) const {
+        return l + r;
+    }
+
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> run(
+        ParMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, a, b> const &r
+    ) const {
+        Matrix<T, a, b> result;
+        vector<future<void>> jobs;
+        jobs.reserve(a);
+        PendingTasksGuard<future<void>> guard(mode.executor, jobs);
+
+        // Parallelize over rows to keep each task writing to disjoint output data.
+        for (int i = 0; i < a; ++i) {
+            jobs.emplace_back(mode.executor.submit([&l, &r, &result, i]() {
+                for (int j = 0; j < b; ++j) {
+                    result(i, j) = l(i, j) + r(i, j);
+                }
+            }));
+        }
+
+        for (auto &job : jobs) {
+            job.get();
+        }
+        guard.dismiss();
+
+        return result;
     }
 };
 

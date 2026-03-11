@@ -48,7 +48,7 @@ public:
         );
         future<R> res = task->get_future();
 
-        const bool success = enqueueTask([task]() { (*task)(); });
+        bool const success = enqueueTask([task]() { (*task)(); });
         if (!success) {
             throw std::runtime_error("Failed to submit task");
         }
@@ -58,6 +58,7 @@ public:
 
     /*
     cancel all pending tasks in the thread pool.
+    After cancel, the executor can still be reused.
     */
     virtual void cancel() = 0;
 
@@ -69,20 +70,26 @@ protected:
 // LockExecutor implements a thread pool using a mutex and condition variable to synchronize access to a task queue.
 class LockExecutor : public Executor {
 public:
-    LockExecutor(
-        size_t num_threads = thread::hardware_concurrency()
-    ) : num_threads(num_threads) { start(); };
+    LockExecutor(size_t num_threads = thread::hardware_concurrency())
+        : num_threads(num_threads > 0 ? num_threads : size_t{1})
+    {
+        start();
+    }
 
     ~LockExecutor() noexcept override {
-        {
-            unique_lock<mutex> lock(mtx);
-            shutdown = true;
-        }
-        cv.notify_all();
-        for (auto &worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
+        try {
+            {
+                unique_lock<mutex> lock(mtx);
+                shutdown = true;
             }
+            cv.notify_all();
+            for (auto &worker : workers) {
+                if (worker.joinable()) {
+                    worker.join();
+                }
+            }
+        } catch (...) {
+            // Never throw from destructor.
         }
     }
 
@@ -131,9 +138,6 @@ private:
     }
 
     void start() {
-        // Clamp num_threads to at least 1
-        num_threads = num_threads > 0 ? num_threads : 1;
-
         workers.reserve(num_threads);
         for (size_t i = 0; i < num_threads; ++i) {
             // constructs thread (this->worker_thread) inplace
@@ -154,8 +158,8 @@ private:
 public:
     // Delete copy and move constructors and assignment operators
 
-    LockExecutor(const LockExecutor&) = delete;
-    LockExecutor& operator=(const LockExecutor&) = delete;
+    LockExecutor(LockExecutor const&) = delete;
+    LockExecutor& operator=(LockExecutor const&) = delete;
 
     LockExecutor(LockExecutor&&) = delete;
     LockExecutor& operator=(LockExecutor&&) = delete;
@@ -168,10 +172,10 @@ class LockFreeExecutor : public Executor {
 public:
     LockFreeExecutor(
         size_t num_threads = thread::hardware_concurrency(),
-        size_t queue_capacity = 1024
+        size_t queue_capacity = size_t{1024}
     )
-        : num_threads(num_threads > 0 ? num_threads : 1),
-          queue_capacity(queue_capacity > 0 ? queue_capacity : 1),
+        : num_threads(num_threads > 0 ? num_threads : size_t{1}),
+          queue_capacity(queue_capacity > 0 ? queue_capacity : size_t{1024}),
           slots(std::make_unique<TaskSlot[]>(this->queue_capacity))
     {
         work_signal.store(false, std::memory_order_relaxed);
@@ -179,13 +183,17 @@ public:
     }
 
     ~LockFreeExecutor() noexcept override {
-        shutdown.store(true, std::memory_order_release);
-        work_signal.store(true, std::memory_order_release);
-        work_signal.notify_all();
-        for (auto &worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
+        try {
+            shutdown.store(true, std::memory_order_release);
+            work_signal.store(true, std::memory_order_release);
+            work_signal.notify_all();
+            for (auto &worker : workers) {
+                if (worker.joinable()) {
+                    worker.join();
+                }
             }
+        } catch (...) {
+            // Never throw from destructor.
         }
     }
 
@@ -207,8 +215,8 @@ public:
     }
 
 public:
-    LockFreeExecutor(const LockFreeExecutor&) = delete;
-    LockFreeExecutor& operator=(const LockFreeExecutor&) = delete;
+    LockFreeExecutor(LockFreeExecutor const&) = delete;
+    LockFreeExecutor& operator=(LockFreeExecutor const&) = delete;
     LockFreeExecutor(LockFreeExecutor&&) = delete;
     LockFreeExecutor& operator=(LockFreeExecutor&&) = delete;
 
@@ -225,7 +233,7 @@ private:
             }
 
             size_t t = tail.load(std::memory_order_relaxed);
-            const size_t h = head.load(std::memory_order_acquire);
+            size_t const h = head.load(std::memory_order_acquire);
             if (t - h >= queue_capacity) {
                 // Queue full
                 std::this_thread::yield();
@@ -261,7 +269,7 @@ private:
     bool tryDequeueTask(function<void()> &out) {
         while (true) {
             size_t h = head.load(std::memory_order_relaxed);
-            const size_t t = tail.load(std::memory_order_acquire);
+            size_t const t = tail.load(std::memory_order_acquire);
             if (h >= t) {
                 return false;
             }

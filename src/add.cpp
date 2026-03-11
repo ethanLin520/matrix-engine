@@ -12,22 +12,22 @@ using namespace matrix_engine;
 template<int N>
 void runCase(int iters, size_t threads) {
     std::mt19937_64 rng(12345);
-    Matrix<double, N> a;
-    Matrix<double, N> b;
-    MultiplyOperation const multiplyOperation{};
+    Matrix<float, N> a;
+    Matrix<float, N> b;
+    AddOperation const addOperation{};
     benchmark::fillRandom(a, rng);
     benchmark::fillRandom(b, rng);
 
     benchmark::BenchmarkRunner runner(N, 4, iters, threads);
-    runner.run<Matrix<double, N, N>>(
+    runner.run<Matrix<float, N, N>>(
         [&]() {
-            return multiplyOperation(SeqMode{}, a, b);
+            return addOperation(SeqMode{}, a, b);
         },
         [&](Executor &executor) {
-            return multiplyOperation(ParMode{executor}, a, b);
+            return addOperation(ParMode{executor}, a, b);
         },
         [&](Executor &executor) {
-            return multiplyOperation(ParMode{executor}, a, b);
+            return addOperation(ParMode{executor}, a, b);
         }
     );
 }
@@ -50,11 +50,12 @@ int main(int argc, char **argv) {
         threads = static_cast<size_t>(std::max(1, std::atoi(argv[2])));
     }
 
-    std::cout << "Benchmark multiply: \tSequential \tvs\t LockExecutor \tvs\t LockFreeExecutor\n";
+    std::cout << "Benchmark add: \tSequential \tvs\t LockExecutor \tvs\t LockFreeExecutor\n";
     std::cout << "threads = " << threads << "\n";
 
 
-    runAllCases<64, 128, 256, 512>(iters, threads);
+    // 12000^2 = 144 million additions = 0.5 GB, MUST use heap-allocated matrices!
+    runAllCases<100, 1000, 10000, 12000>(iters, threads);
 
     return 0;
 }

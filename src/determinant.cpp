@@ -7,13 +7,13 @@
 #include <random>
 #include <thread>
 
-namespace matrix_engine {
+using namespace matrix_engine;
 
 template<int N>
 void runDeterminantCase(int iters, size_t threads) {
     std::mt19937_64 rng(54321);
     Matrix<double, N> m;
-    const DeterminantOperation determinantOp{};
+    DeterminantOperation const determinantOp{};
     benchmark::fillRandom(m, rng);
 
     benchmark::BenchmarkRunner runner(
@@ -37,10 +37,9 @@ void runAllDeterminantCases(int iters, size_t threads) {
     (runDeterminantCase<Ns>(iters, threads), ...);
 }
 
-} // namespace matrix_engine
 
 int main(int argc, char **argv) {
-    int iters = 20;
+    int iters = 10;
     size_t threads = std::thread::hardware_concurrency();
 
     if (argc >= 2) {
@@ -54,7 +53,7 @@ int main(int argc, char **argv) {
     std::cout << "threads = " << threads << "\n";
 
     // Laplace expansion grows factorially, so benchmark only small square matrices.
-    matrix_engine::runAllDeterminantCases<4, 6, 8, 10, 12>(iters, threads);
+    runAllDeterminantCases<4, 6, 8, 10, 12>(iters, threads);
 
     return 0;
 }
