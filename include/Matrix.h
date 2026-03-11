@@ -159,5 +159,20 @@ operator*(Matrix<T, a, b> const &l, Matrix<T, b, c> const &r)
 	}
 	return result;
 }
+
+template<floating_point T, int a, int b>
+inline Matrix<T, a, b>
+operator+(Matrix<T, a, b> const &l, Matrix<T, a, b> const &r)
+{
+	Matrix<T, a, b> result;
+	for (int i = 0; i < a; i++) {
+		for (int j = 0; j < b; j++) {
+			result(i, j) = l(i, j) + r(i, j);
+		}
+	}
+	return result;
+}
+
+
 }
 #endif

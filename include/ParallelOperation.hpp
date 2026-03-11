@@ -175,6 +175,60 @@ private:
     }
 };
 
+
+
+class AddOperation {
+public:
+    template<floating_point T, int a, int b, int c>
+    Matrix<T, a, c> operator()(
+        ExecutionMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
+    ) const {
+        return std::visit([&](auto const &executionMode) {
+            return run(executionMode, l, r);
+        }, mode);
+    }
+
+private:
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> run(
+        SeqMode const &,
+        Matrix<T, a, b> const &l,
+        Matrix<T, a, b> const &r
+    ) const {
+        return l + r;
+    }
+
+    template<floating_point T, int a, int b>
+    Matrix<T, a, b> run(
+        ParMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, a, b> const &r
+    ) const {
+        Matrix<T, a, b> result;
+        vector<future<void>> jobs;
+        jobs.reserve(a);
+        PendingTasksGuard<future<void>> guard(mode.executor, jobs);
+
+        // Parallelize over rows to keep each task writing to disjoint output data.
+        for (int i = 0; i < a; ++i) {
+            jobs.emplace_back(mode.executor.submit([&l, &r, &result, i]() {
+                for (int j = 0; j < b; ++j) {
+                    result(i, j) = l(i, j) + r(i, j);
+                }
+            }));
+        }
+
+        for (auto &job : jobs) {
+            job.get();
+        }
+        guard.dismiss();
+
+        return result;
+    }
+};
+
 } // namespace matrix_engine
 
 #endif // PARALLEL_OPERATION_HPP

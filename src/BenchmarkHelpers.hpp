@@ -13,9 +13,11 @@
 namespace matrix_engine {
 namespace benchmark {
 
-template<int R, int C>
-void fillRandom(Matrix<double, R, C> &m, std::mt19937_64 &rng) {
-    std::uniform_real_distribution<double> dist(-1.0, 1.0);
+using std::floating_point;
+
+template<floating_point F, int R, int C>
+void fillRandom(Matrix<F, R, C> &m, std::mt19937_64 &rng) {
+    std::uniform_real_distribution<F> dist(-1.0, 1.0);
     for (int i = 0; i < R; ++i) {
         for (int j = 0; j < C; ++j) {
             m(i, j) = dist(rng);
@@ -51,19 +53,19 @@ inline void printResultRow(
               << "x\n";
 }
 
-template<std::floating_point T>
-inline void consumeResult(T seqOut, T parOut, T lockFreeOut) {
-    T volatile sink = seqOut + parOut + lockFreeOut;
+template<std::floating_point F>
+inline void consumeResult(F seqOut, F parOut, F lockFreeOut) {
+    F volatile sink = seqOut + parOut + lockFreeOut;
     (void)sink;
 }
 
-template<std::floating_point T, int R, int C>
+template<std::floating_point F, int R, int C>
 inline void consumeResult(
-    Matrix<T, R, C> const &seqOut,
-    Matrix<T, R, C> const &parOut,
-    Matrix<T, R, C> const &lockFreeOut
+    Matrix<F, R, C> const &seqOut,
+    Matrix<F, R, C> const &parOut,
+    Matrix<F, R, C> const &lockFreeOut
 ) {
-    volatile T sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
+    volatile F sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
     (void)sink;
 }
 
