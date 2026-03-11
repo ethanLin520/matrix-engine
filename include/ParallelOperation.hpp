@@ -22,6 +22,42 @@ struct ParMode {
 
 using ExecutionMode = std::variant<SeqMode, ParMode>;   // Open for extension
 
+/*
+RAII guard to ensure that all pending tasks are
+either completed or cancelled when the guard goes out of scope.
+*/
+template<typename FutureT>
+class PendingTasksGuard {
+public:
+    PendingTasksGuard(Executor &executor, vector<FutureT> &taskQueue) noexcept
+        : executor(executor), q(taskQueue) {}
+
+    ~PendingTasksGuard() noexcept {
+        if (!active) {
+            return;
+        }
+        try {
+            executor.cancel();
+            for (auto &job : q) {
+                if (job.valid()) {
+                    job.wait();
+                }
+            }
+        } catch (...) {
+            // Never throw from cleanup in destructor.
+        }
+    }
+
+    void dismiss() noexcept {
+        active = false;
+    }
+
+private:
+    Executor &executor;
+    vector<FutureT> &q;
+    bool active = true;
+};
+
 class MultiplyOperation {
 public:
     template<floating_point T, int a, int b, int c>
@@ -54,6 +90,7 @@ private:
         Matrix<T, a, c> result;
         vector<future<void>> jobs;
         jobs.reserve(a);
+        PendingTasksGuard<future<void>> guard(mode.executor, jobs);
 
         // Parallelize over rows to keep each task writing to disjoint output data.
         for (int i = 0; i < a; ++i) {
@@ -69,13 +106,9 @@ private:
         }
 
         for (auto &job : jobs) {
-            try {
-                job.get();
-            } catch (...) {
-                mode.executor.cancel(); // Cancel remaining tasks if any task throws
-                throw std::current_exception(); // Rethrow the exception to be handled by the caller
-            }
+            job.get();
         }
+        guard.dismiss();
 
         return result;
     }
@@ -112,6 +145,7 @@ private:
         } else {
             vector<future<T>> jobs;
             jobs.reserve(n);
+            PendingTasksGuard<future<T>> guard(mode.executor, jobs);
 
             for (int i = 0; i < n; ++i) {
                 const T coefficient = (i % 2 ? -1 : 1) * m(i, 0);
@@ -127,13 +161,9 @@ private:
 
             T value = 0;
             for (auto &job : jobs) {
-                try {
-                    value += job.get();
-                } catch (...) {
-                    mode.executor.cancel(); // Cancel remaining tasks if any task throws
-                    throw std::current_exception(); // Rethrow the exception to be handled by the caller
-                }
+                value += job.get();
             }
+            guard.dismiss();
             return value;
         }
     }
