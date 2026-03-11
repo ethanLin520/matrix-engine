@@ -14,7 +14,7 @@ void runCase(int iters, size_t threads) {
     std::mt19937_64 rng(12345);
     Matrix<double, N> a;
     Matrix<double, N> b;
-    const MultiplyOperation multiplyOperation{};
+    MultiplyOperation const multiplyOperation{};
     benchmark::fillRandom(a, rng);
     benchmark::fillRandom(b, rng);
 

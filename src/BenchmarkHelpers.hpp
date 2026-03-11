@@ -53,15 +53,15 @@ inline void printResultRow(
 
 template<std::floating_point T>
 inline void consumeResult(T seqOut, T parOut, T lockFreeOut) {
-    volatile T sink = seqOut + parOut + lockFreeOut;
+    T volatile sink = seqOut + parOut + lockFreeOut;
     (void)sink;
 }
 
 template<std::floating_point T, int R, int C>
 inline void consumeResult(
-    const Matrix<T, R, C> &seqOut,
-    const Matrix<T, R, C> &parOut,
-    const Matrix<T, R, C> &lockFreeOut
+    Matrix<T, R, C> const &seqOut,
+    Matrix<T, R, C> const &parOut,
+    Matrix<T, R, C> const &lockFreeOut
 ) {
     volatile T sink = seqOut(0, 0) + parOut(0, 0) + lockFreeOut(0, 0);
     (void)sink;
@@ -118,9 +118,9 @@ public:
 
         consumeResult(seqOut, parOut, lockFreeOut);
 
-        const auto seqUs = duration_cast<microseconds>(seqEnd - seqStart).count();
-        const auto parUs = duration_cast<microseconds>(parEnd - parStart).count();
-        const auto lockFreeUs = duration_cast<microseconds>(lockFreeEnd - lockFreeStart).count();
+        auto const seqUs = duration_cast<microseconds>(seqEnd - seqStart).count();
+        auto const parUs = duration_cast<microseconds>(parEnd - parStart).count();
+        auto const lockFreeUs = duration_cast<microseconds>(lockFreeEnd - lockFreeStart).count();
 
         printResultRow(n, nWidth, iters, seqUs, parUs, lockFreeUs);
     }

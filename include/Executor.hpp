@@ -48,7 +48,7 @@ public:
         );
         future<R> res = task->get_future();
 
-        const bool success = enqueueTask([task]() { (*task)(); });
+        bool const success = enqueueTask([task]() { (*task)(); });
         if (!success) {
             throw std::runtime_error("Failed to submit task");
         }
@@ -74,15 +74,19 @@ public:
     ) : num_threads(num_threads) { start(); };
 
     ~LockExecutor() noexcept override {
-        {
-            unique_lock<mutex> lock(mtx);
-            shutdown = true;
-        }
-        cv.notify_all();
-        for (auto &worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
+        try {
+            {
+                unique_lock<mutex> lock(mtx);
+                shutdown = true;
             }
+            cv.notify_all();
+            for (auto &worker : workers) {
+                if (worker.joinable()) {
+                    worker.join();
+                }
+            }
+        } catch (...) {
+            // Never throw from destructor.
         }
     }
 
@@ -154,8 +158,8 @@ private:
 public:
     // Delete copy and move constructors and assignment operators
 
-    LockExecutor(const LockExecutor&) = delete;
-    LockExecutor& operator=(const LockExecutor&) = delete;
+    LockExecutor(LockExecutor const&) = delete;
+    LockExecutor& operator=(LockExecutor const&) = delete;
 
     LockExecutor(LockExecutor&&) = delete;
     LockExecutor& operator=(LockExecutor&&) = delete;
@@ -179,13 +183,17 @@ public:
     }
 
     ~LockFreeExecutor() noexcept override {
-        shutdown.store(true, std::memory_order_release);
-        work_signal.store(true, std::memory_order_release);
-        work_signal.notify_all();
-        for (auto &worker : workers) {
-            if (worker.joinable()) {
-                worker.join();
+        try {
+            shutdown.store(true, std::memory_order_release);
+            work_signal.store(true, std::memory_order_release);
+            work_signal.notify_all();
+            for (auto &worker : workers) {
+                if (worker.joinable()) {
+                    worker.join();
+                }
             }
+        } catch (...) {
+            // Never throw from destructor.
         }
     }
 
@@ -207,8 +215,8 @@ public:
     }
 
 public:
-    LockFreeExecutor(const LockFreeExecutor&) = delete;
-    LockFreeExecutor& operator=(const LockFreeExecutor&) = delete;
+    LockFreeExecutor(LockFreeExecutor const&) = delete;
+    LockFreeExecutor& operator=(LockFreeExecutor const&) = delete;
     LockFreeExecutor(LockFreeExecutor&&) = delete;
     LockFreeExecutor& operator=(LockFreeExecutor&&) = delete;
 
@@ -225,7 +233,7 @@ private:
             }
 
             size_t t = tail.load(std::memory_order_relaxed);
-            const size_t h = head.load(std::memory_order_acquire);
+            size_t const h = head.load(std::memory_order_acquire);
             if (t - h >= queue_capacity) {
                 // Queue full
                 std::this_thread::yield();
@@ -261,7 +269,7 @@ private:
     bool tryDequeueTask(function<void()> &out) {
         while (true) {
             size_t h = head.load(std::memory_order_relaxed);
-            const size_t t = tail.load(std::memory_order_acquire);
+            size_t const t = tail.load(std::memory_order_acquire);
             if (h >= t) {
                 return false;
             }

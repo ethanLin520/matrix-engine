@@ -37,7 +37,7 @@ public:
 		}
 
 		size_t rowIndex = 0;
-		for (const auto &row : init) {
+		for (auto const &row : init) {
 			if (row.size() > static_cast<size_t>(cols)) {
 				throw std::invalid_argument("Matrix initializer has too many columns");
 			}
@@ -62,7 +62,7 @@ public:
 	inline friend
 		ostream &
 		operator<<
-		(ostream &os, const Matrix<T, rows, cols> &m) {
+			(ostream &os, Matrix<T, rows, cols> const &m) {
 		size_t width = m.longestElementSize() + 2;
 		os << "[ " << endl;
 		for (int i = 0; i < rows; i++) {
@@ -113,7 +113,7 @@ private:
 
 template<floating_point T, int h, int w>
 T
-determinantImpl(const Matrix<T, h, w> &m)
+determinantImpl(Matrix<T, h, w> const &m)
 {
 	T val = 0;
 	for (int i = 0; i < h; i++) {
@@ -124,14 +124,14 @@ determinantImpl(const Matrix<T, h, w> &m)
 
 template<floating_point T>
 T
-determinantImpl(const Matrix<T, 1, 1> &m)
+determinantImpl(Matrix<T, 1, 1> const &m)
 {
 	return m(0, 0);
 }
 
 template<floating_point T>
 T
-determinantImpl(const Matrix<T, 2, 2> &m)
+determinantImpl(Matrix<T, 2, 2> const &m)
 {
 	return m(0, 0) * m(1, 1) - m(0, 1) * m(1, 0);
 }

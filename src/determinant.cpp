@@ -13,7 +13,7 @@ template<int N>
 void runDeterminantCase(int iters, size_t threads) {
     std::mt19937_64 rng(54321);
     Matrix<double, N> m;
-    const DeterminantOperation determinantOp{};
+    DeterminantOperation const determinantOp{};
     benchmark::fillRandom(m, rng);
 
     benchmark::BenchmarkRunner runner(

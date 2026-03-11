@@ -56,17 +56,23 @@ private:
     Executor &executor;
     vector<FutureT> &q;
     bool active = true;
+
+public:
+    PendingTasksGuard(PendingTasksGuard const&) = delete;
+    PendingTasksGuard& operator=(PendingTasksGuard const&) = delete;
+    PendingTasksGuard(PendingTasksGuard&&) = delete;
+    PendingTasksGuard& operator=(PendingTasksGuard&&) = delete;
 };
 
 class MultiplyOperation {
 public:
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> operator()(
-        const ExecutionMode &mode,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        ExecutionMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
-        return std::visit([&](const auto &executionMode) {
+        return std::visit([&](auto const &executionMode) {
             return run(executionMode, l, r);
         }, mode);
     }
@@ -74,18 +80,18 @@ public:
 private:
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> run(
-        const SeqMode &,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        SeqMode const &,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
         return l * r;
     }
 
     template<floating_point T, int a, int b, int c>
     Matrix<T, a, c> run(
-        const ParMode &mode,
-        const Matrix<T, a, b> &l,
-        const Matrix<T, b, c> &r
+        ParMode const &mode,
+        Matrix<T, a, b> const &l,
+        Matrix<T, b, c> const &r
     ) const {
         Matrix<T, a, c> result;
         vector<future<void>> jobs;
@@ -118,10 +124,10 @@ class DeterminantOperation {
 public:
     template<floating_point T, int n>
     T operator()(
-        const ExecutionMode &mode,
-        const Matrix<T, n, n> &m
+        ExecutionMode const &mode,
+        Matrix<T, n, n> const &m
     ) const {
-        return std::visit([&](const auto &executionMode) {
+        return std::visit([&](auto const &executionMode) {
             return run(executionMode, m);
         }, mode);
     }
@@ -129,16 +135,16 @@ public:
 private:
     template<floating_point T, int n>
     T run(
-        const SeqMode &,
-        const Matrix<T, n, n> &m
+        SeqMode const &,
+        Matrix<T, n, n> const &m
     ) const {
         return m.determinant();
     }
 
     template<floating_point T, int n>
     T run(
-        const ParMode &mode,
-        const Matrix<T, n, n> &m
+        ParMode const &mode,
+        Matrix<T, n, n> const &m
     ) const {
         if constexpr (n <= 3) {
             return m.determinant();
@@ -148,12 +154,12 @@ private:
             PendingTasksGuard<future<T>> guard(mode.executor, jobs);
 
             for (int i = 0; i < n; ++i) {
-                const T coefficient = (i % 2 ? -1 : 1) * m(i, 0);
+                T const coefficient = (i % 2 ? -1 : 1) * m(i, 0);
                 if (coefficient == static_cast<T>(0)) {
                     continue;
                 }
 
-                const auto minorMatrix = m.minor(i, 0);
+                auto const minorMatrix = m.minor(i, 0);
                 jobs.emplace_back(mode.executor.submit([coefficient, minorMatrix]() {
                     return coefficient * minorMatrix.determinant();
                 }));
