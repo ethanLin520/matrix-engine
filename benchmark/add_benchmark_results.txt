@@ -1,0 +1,34 @@
+Add Benchmark Results
+
+
+
+Benchmark add: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 1
+N= 100  iters=   5  seq(μs)=        17  par(μs)=       164  lf(μs)=       106  par_speedup = 0.10x  lf_speedup = 0.16x
+N=1000  iters=   5  seq(μs)=      1026  par(μs)=      1987  lf(μs)=      2252  par_speedup = 0.52x  lf_speedup = 0.46x
+N=10000  iters=   5  seq(μs)=    134171  par(μs)=    172541  lf(μs)=    135717  par_speedup = 0.78x  lf_speedup = 0.99x
+N=12000  iters=   5  seq(μs)=    207098  par(μs)=    244656  lf(μs)=    277339  par_speedup = 0.85x  lf_speedup = 0.75x
+
+
+Benchmark add: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 2
+N= 100  iters=   5  seq(μs)=        17  par(μs)=       276  lf(μs)=       165  par_speedup = 0.06x  lf_speedup = 0.10x
+N=1000  iters=   5  seq(μs)=      1108  par(μs)=      2282  lf(μs)=      1636  par_speedup = 0.49x  lf_speedup = 0.68x
+N=10000  iters=   5  seq(μs)=    167560  par(μs)=    137910  lf(μs)=    123934  par_speedup = 1.21x  lf_speedup = 1.35x
+N=12000  iters=   5  seq(μs)=    206323  par(μs)=    195082  lf(μs)=   1153130  par_speedup = 1.06x  lf_speedup = 0.18x
+
+
+Benchmark add: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 4
+N= 100  iters=   5  seq(μs)=        25  par(μs)=       472  lf(μs)=       354  par_speedup = 0.05x  lf_speedup = 0.07x
+N=1000  iters=   5  seq(μs)=      1313  par(μs)=      5002  lf(μs)=      2424  par_speedup = 0.26x  lf_speedup = 0.54x
+N=10000  iters=   5  seq(μs)=    145131  par(μs)=    132436  lf(μs)=    128617  par_speedup = 1.10x  lf_speedup = 1.13x
+N=12000  iters=   5  seq(μs)=    215412  par(μs)=    172625  lf(μs)=    220040  par_speedup = 1.25x  lf_speedup = 0.98x
+
+
+Benchmark add: 	Sequential 	vs	 LockExecutor 	vs	 LockFreeExecutor
+threads = 8
+N= 100  iters=   5  seq(μs)=        17  par(μs)=       902  lf(μs)=       533  par_speedup = 0.02x  lf_speedup = 0.03x
+N=1000  iters=   5  seq(μs)=      1162  par(μs)=      9877  lf(μs)=      4220  par_speedup = 0.12x  lf_speedup = 0.28x
+N=10000  iters=   5  seq(μs)=    147356  par(μs)=    124178  lf(μs)=    139879  par_speedup = 1.19x  lf_speedup = 1.05x
+N=12000  iters=   5  seq(μs)=    210684  par(μs)=    170578  lf(μs)=    382131  par_speedup = 1.24x  lf_speedup = 0.55x

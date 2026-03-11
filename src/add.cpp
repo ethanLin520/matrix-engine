@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     std::cout << "threads = " << threads << "\n";
 
 
-    // 12000^2 = 144 million additions, MUST use heap-allocated matrices!
+    // 12000^2 = 144 million additions = 0.5 GB, MUST use heap-allocated matrices!
     runAllCases<100, 1000, 10000, 12000>(iters, threads);
 
     return 0;
