@@ -26,8 +26,8 @@ bool almostEqual(double a, double b, double eps = 1e-9) {
     return std::abs(a - b) <= eps;
 }
 
-template<typename T, typename U>
-void requireAlmostEqual(T const &actual, U const &expected, std::string const &message) {
+template<typename F, typename U>
+void requireAlmostEqual(F const &actual, U const &expected, std::string const &message) {
     if (!almostEqual(actual, expected)) {
         std::cerr << message << "\n";
         std::exit(1);

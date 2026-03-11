@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <concepts>
 #include <stdexcept>
+#include <memory>
 
 #undef minor
 using std::initializer_list;
@@ -30,8 +31,8 @@ namespace matrix_engine {
 template<floating_point T, int rows, int cols = rows>
 class Matrix {
 public:
-	Matrix() : data{} {}
-	Matrix(initializer_list<initializer_list<T>> init) : data{} {
+	Matrix() : data(std::make_unique<array<array<T, cols>, rows>>()) {}
+	Matrix(initializer_list<initializer_list<T>> init) : data(std::make_unique<array<array<T, cols>, rows>>()) {
 		if (init.size() > static_cast<size_t>(rows)) {
 			throw std::invalid_argument("Matrix initializer has too many rows");
 		}
@@ -41,22 +42,27 @@ public:
 			if (row.size() > static_cast<size_t>(cols)) {
 				throw std::invalid_argument("Matrix initializer has too many columns");
 			}
-			std::copy(row.begin(), row.end(), data[rowIndex].begin());
+			std::copy(row.begin(), row.end(), data->operator[](rowIndex).begin());
 			++rowIndex;
 		}
 	}
+
+	Matrix(Matrix &&) = default;
+	Matrix &operator=(Matrix &&) = default;
+
+
 	T &operator()(int x, int y) {
 		if (x < 0 || x >= rows || y < 0 || y >= cols) {
 			throw std::out_of_range("Matrix index out of range");
 		}
-		return data[x][y];
+		return (*data)[x][y];
 	}
 
 	T operator()(int x, int y) const {
 		if (x < 0 || x >= rows || y < 0 || y >= cols) {
 			throw std::out_of_range("Matrix index out of range");
 		}
-		return data[x][y];
+		return (*data)[x][y];
 	}
 
 	inline friend
@@ -85,10 +91,19 @@ public:
 				if (j == c) {
 					continue;
 				}
-				result(i < r ? i : i - 1, j < c ? j : j - 1) = data[i][j];
+				result(i < r ? i : i - 1, j < c ? j : j - 1) = (*data)[i][j];
 			}
 		}
 		return result;
+	}
+
+	Matrix<T, cols, rows> operator+=(Matrix<T, cols, rows> const &other) {
+		for (int i = 0; i < rows; i++) {
+			for (int j = 0; j < cols; j++) {
+				(*data)[i][j] += other(i, j);
+			}
+		}
+		return *this;
 	}
 
 	// Defer the definition until further below to avoid
@@ -105,9 +120,14 @@ private:
 		return std::max(acc, accumulate(row.begin(), row.end(), static_cast<size_t>(0), accumulateMax));
 	}
 	size_t longestElementSize() const {
-		return accumulate(data.begin(), data.end(), 0, accumulateMaxRow);
+		return accumulate(data->begin(), data->end(), 0, accumulateMaxRow);
 	}
-	array<array<T, cols>, rows> data;
+
+	std::unique_ptr<std::array<std::array<T, cols>, rows>> data;
+
+public:
+	Matrix(Matrix const &) = delete;
+	Matrix &operator=(Matrix const &) = delete;
 };
 
 
@@ -174,5 +194,7 @@ operator+(Matrix<T, a, b> const &l, Matrix<T, a, b> const &r)
 }
 
 
-}
+
+
+} // namespace matrix_engine
 #endif

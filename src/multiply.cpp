@@ -7,7 +7,7 @@
 #include <random>
 #include <thread>
 
-namespace matrix_engine {
+using namespace matrix_engine;
 
 template<int N>
 void runCase(int iters, size_t threads) {
@@ -38,7 +38,6 @@ void runAllCases(int iters, size_t threads) {
     (runCase<Ns>(iters, threads), ...);
 }
 
-} // namespace matrix_engine
 
 int main(int argc, char **argv) {
     int iters = 5;
@@ -55,7 +54,7 @@ int main(int argc, char **argv) {
     std::cout << "threads = " << threads << "\n";
 
 
-    matrix_engine::runAllCases<64, 128, 256, 512>(iters, threads);
+    runAllCases<64, 128, 256, 512>(iters, threads);
 
     return 0;
 }

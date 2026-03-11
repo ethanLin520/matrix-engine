@@ -159,9 +159,8 @@ private:
                     continue;
                 }
 
-                auto const minorMatrix = m.minor(i, 0);
-                jobs.emplace_back(mode.executor.submit([coefficient, minorMatrix]() {
-                    return coefficient * minorMatrix.determinant();
+                jobs.emplace_back(mode.executor.submit([coefficient, &m, i]() {
+                    return coefficient * m.minor(i, 0).determinant();
                 }));
             }
 
