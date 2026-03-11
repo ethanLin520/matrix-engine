@@ -37,7 +37,9 @@ chmod +x benchmark.sh
 ./benchmark.sh
 ```
 ### Result
-See `.txt` output files in `/benchmark`.
+See `.txt` output files in [`/benchmark`](/benchmark). 
+
+The benchmark was run on an Apple M3 CPU with 8 cores (4 performance and 4 efficiency). The performance will vary across machines and platforms.
 
 ## Architecture
 
